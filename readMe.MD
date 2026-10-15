@@ -1,0 +1,1 @@
+an api for the hit anime Jujutsu-Kaisen.
