@@ -3,33 +3,27 @@ package models
 type Character struct {
 	ID               int64             `json:"id"`
 	Name             string            `json:"name"`
-	About            string            `json:"about"`
-	Alias            []string          `json:"alias"`
+	Description      string            `json:"description"`
+	Image            string            `json:"images,omitempty"`
 	Species          string            `json:"species"`
+	Status           string            `json:"status"`
 	Birthday         string            `json:"birthday"`
 	Age              int               `json:"age"`
 	Gender           string            `json:"gender"`
-	Height           int               `json:"height_cm"`
-	Weight           float64           `json:"weight_kg"`
+	Height           int               `json:"height"`
+	Weight           float64           `json:"weight"`
+	HairColor        string            `json:"hair_color"`
+	EyeColor         string            `json:"eye_color"`
+	Grade            string            `json:"grade"`
 	Clan             string            `json:"clan"`
 	CursedTechniques []CursedTechnique `json:"cursed_techniques,omitempty"`
 	Domain           *DomainExpansion  `json:"domain,omitempty"`
-	HairColor        string            `json:"hair_color"`
-	EyeColor         string            `json:"eye_color"`
-	Status           string            `json:"status"`
-	Relatives        []Relative        `json:"relatives,omitempty"`
-	Occupation       []Occupation      `json:"occupation,omitempty"`
-	Affiliation      []Affiliation     `json:"affiliation,omitempty"`
-	Grade            string            `json:"grade"`
-	FirstAppearance  *Episode          `json:"first_appearance,omitempty"`
-	Images           []Image           `json:"images,omitempty"`
+	FirstAppearance  *FirstAppearance  `json:"first_appearance,omitempty"`
 }
 
-type Clan struct {
-	ID          int64  `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Rank        int    `json:"rank"`
+type FirstAppearance struct {
+	EpisodeID    int64
+	EpisodeTitle string
 }
 
 type DomainExpansion struct {
@@ -39,29 +33,77 @@ type DomainExpansion struct {
 	Description string `json:"description"`
 }
 
+type CreateDomainExpansionRequest struct {
+	CharacterID int64
+	Name        string
+	Description string
+}
+
+type UpdateDomainExpansionRequest struct {
+	Name        *string
+	Description *string
+}
+
 type CursedTechnique struct {
 	ID          int64  `json:"id"`
+	CharacterID int64  `json:"character_id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Type        string `json:"type"`
 }
 
-type Image struct {
-	URL string `json:"url"`
-}
-
-type Affiliation struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
-}
-
-type Occupation struct {
-	Location string `json:"location"`
-	Title    string `json:"title"`
-}
-
-type Relative struct {
+type CreateCursedTechniqueRequest struct {
 	CharacterID int64  `json:"character_id"`
 	Name        string `json:"name"`
-	Relation    string `json:"relation"`
+	Description string `json:"description"`
+	Type        string `json:"type"`
+}
+
+type UpdateCursedTechnique struct {
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
+	Type        *string `json:"type"`
+}
+
+type CreateCharacterRequest struct {
+	Name            string
+	Description     string
+	Image           string
+	Species         string
+	Status          string
+	Birthday        string
+	Age             int
+	Gender          string
+	Height          int
+	Weight          float64
+	HairColor       string
+	EyeColor        string
+	Grade           string
+	Clan            string
+	FirstAppearance int64
+}
+
+type UpdateCharacterRequest struct {
+	Name        *string
+	Description *string
+	Image       *string
+	Species     *string
+	Status      *string
+	Birthday    *string
+	Age         *int
+	Gender      *string
+	Height      *int
+	Weight      *float64
+	HairColor   *string
+	EyeColor    *string
+	Grade       *string
+	Clan        *string
+}
+
+// CharacterPaginatedResponse wraps a list of characters with pagination metadata.
+type CharacterPaginatedResponse struct {
+	Data  []Character `json:"data"`
+	Count int         `json:"count"`
+	Page  int         `json:"page"`
+	Limit int         `json:"limit"`
 }
