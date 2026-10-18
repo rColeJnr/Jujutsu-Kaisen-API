@@ -2,7 +2,6 @@ package repository
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -169,9 +168,13 @@ func (r *sqlCharacterRepository) FindAll() ([]*models.Character, error) {
 	defer r.RUnlock()
 
 	query := `
-		SELECT id, name, description, image, species, status, birthday, 
-			age, gender, height, weight, hair_color, eye_color, grade, clan, first_appearance_ep,
-		FROM character
+		SELECT c.id, c.name, c.description, c.image, c.species, c.status, c.birthday, 
+			c.age, c.gender, c.height, c.weight, c.hair_color, c.eye_color, c.grade, c.clan, c.first_appearance_ep,
+			d.id, d.name, d.description,
+			e.title
+		FROM character c
+		LEFT JOIN domain_expansion d ON c.id = d.character_id
+		LEFT JOIN episode e ON c.first_appearance_ep = e.id
 	`
 
 	rows, err := r.db.Query(query)
@@ -183,7 +186,10 @@ func (r *sqlCharacterRepository) FindAll() ([]*models.Character, error) {
 	var characters []*models.Character
 	for rows.Next() {
 		var c models.Character
-		var ep int64
+		var ep int64 // first appearance episode
+		var e models.Episode
+		var dID sql.NullInt64 // domain expansion
+		var dName, dDescription sql.NullString
 
 		if err := rows.Scan(
 			&c.ID,
@@ -202,11 +208,26 @@ func (r *sqlCharacterRepository) FindAll() ([]*models.Character, error) {
 			&c.Grade,
 			&c.Clan,
 			&ep,
+			&dID,
+			&dName,
+			&dDescription,
+			&e.Title,
 		); err != nil {
-			return nil, fmt.Errorf("character_repo.FindByID: %w", err)
+			return nil, fmt.Errorf("character_repo.FindAll: %w", err)
 		}
 
-		c.FirstAppearance = &models.FirstAppearance{EpisodeID: ep}
+		c.FirstAppearance = &models.FirstAppearance{EpisodeID: ep, EpisodeTitle: e.Title}
+
+		if dID.Valid {
+			c.Domain = &models.DomainExpansion{
+				ID:          dID.Int64,
+				CharacterID: c.ID,
+				Name:        dName.String,
+				Description: dDescription.String,
+			}
+		}
+
+		c.CursedTechniques = []models.CursedTechnique{}
 
 		characters = append(characters, &c)
 	}
@@ -215,23 +236,17 @@ func (r *sqlCharacterRepository) FindAll() ([]*models.Character, error) {
 		return nil, fmt.Errorf("character_repo.FindAll: %w", err)
 	}
 
-	for _, char := range characters {
-		// Query Domain Expansion
-		var domain models.DomainExpansion
-		row := r.db.QueryRow("SELECT id, character_id, name, description FROM domain_expansion WHERE character_id = ?", char.ID)
-		err = row.Scan(&domain.ID, &domain.CharacterID, &domain.Name, &domain.Description)
-		if err == nil {
-			char.Domain = &domain
-		} else if !errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("character_repo.FindByID: %w", err)
-		}
+	if len(characters) == 0 {
+		return characters, nil
+	}
 
+	// Query Cursed Techniques
+	for _, char := range characters {
 		ctRows, err := r.db.Query("SELECT id, character_id, name, description, type FROM cursed_techniques WHERE character_id = ?", char.ID)
 		if err != nil && err != sql.ErrNoRows {
 			return nil, fmt.Errorf("character_repo.FindAll: %w", err)
 		}
 
-		// Query Cursed Techniques
 		func() {
 			defer ctRows.Close()
 			for ctRows.Next() {
@@ -243,12 +258,9 @@ func (r *sqlCharacterRepository) FindAll() ([]*models.Character, error) {
 			}
 		}()
 
-		// Query Episode
-		var episode models.Episode
-		if err := r.db.QueryRow("SELECT id, title FROM episode WHERE id = ?", char.FirstAppearance.EpisodeID).Scan(&episode.ID, &episode.Title); err != nil {
+		if err = ctRows.Err(); err != nil {
 			return nil, fmt.Errorf("character_repo.FindAll: %w", err)
 		}
-		char.FirstAppearance = &models.FirstAppearance{EpisodeID: episode.ID, EpisodeTitle: episode.Title}
 	}
 
 	return characters, nil
@@ -258,67 +270,92 @@ func (r *sqlCharacterRepository) FindByID(id int64) (*models.Character, error) {
 	r.RLock()
 	defer r.RUnlock()
 
-	c := &models.Character{}
-	var ep int64
-	row := r.db.QueryRow("SELECT * FROM character WHERE id = ?", id)
-	err := row.Scan(
-		&c.ID,
-		&c.Name,
-		&c.Description,
-		&c.Image,
-		&c.Species,
-		&c.Status,
-		&c.Birthday,
-		&c.Age,
-		&c.Gender,
-		&c.Height,
-		&c.Weight,
-		&c.HairColor,
-		&c.EyeColor,
-		&c.Grade,
-		&c.Clan,
-		&ep,
-	)
+	query := `
+		SELECT c.id, c.name, c.description, c.image, c.species, c.status, c.birthday, 
+			c.age, c.gender, c.height, c.weight, c.hair_color, c.eye_color, c.grade, c.clan, c.first_appearance_ep,
+			d.id, d.name, d.description,
+			e.title,
+			t.id, t.name, t.description, t.type
+		FROM character c
+		LEFT JOIN domain_expansion d ON c.id = d.character_id
+		LEFT JOIN episode e ON c.first_appearance_ep = e.id
+		LEFT JOIN cursed_technique t ON c.id = t.character_id
+		WHERE id = ?
+	`
+
+	rows, err := r.db.Query(query, id)
 	if err != nil {
-		return nil, fmt.Errorf("character_repo.FindByID: %w", err)
-	}
-
-	// Query Domain Expansion
-	domain := models.DomainExpansion{}
-	row = r.db.QueryRow("SELECT id, character_id, name, description FROM domain_expansion WHERE character_id = ?", id)
-	err = row.Scan(&domain.ID, &domain.CharacterID, &domain.Name, &domain.Description)
-	if err == nil {
-		c.Domain = &domain
-	} else if !errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("character_repo.FindByID: %w", err)
-	}
-
-	// Query Cursed Techniques
-	rows, err := r.db.Query("SELECT id, character_id, name, description, type FROM cursed_techniques WHERE character_id = ?", id)
-	if err != nil && err != sql.ErrNoRows {
-		return nil, fmt.Errorf("character_repo.FindByID: %w", err)
+		return nil, fmt.Errorf("character_repo.FindAll: %w", err)
 	}
 	defer rows.Close()
 
+	c := &models.Character{}
 	for rows.Next() {
-		var ct models.CursedTechnique
-		err := rows.Scan(&ct.ID, &ct.CharacterID, &ct.Name, &ct.Description, &ct.Type)
+		var (
+			ep                         int64 // first appearance episode
+			e                          models.Episode
+			dID, tID                   sql.NullInt64 // domain expansion & cursed technique
+			dName, dDescription        sql.NullString
+			tName, tDescription, tType sql.NullString
+		)
+		err := rows.Scan(
+			&c.ID,
+			&c.Name,
+			&c.Description,
+			&c.Image,
+			&c.Species,
+			&c.Status,
+			&c.Birthday,
+			&c.Age,
+			&c.Gender,
+			&c.Height,
+			&c.Weight,
+			&c.HairColor,
+			&c.EyeColor,
+			&c.Grade,
+			&c.Clan,
+			&ep,
+			&dID,
+			&dName,
+			&dDescription,
+			&e.Title,
+			&tID,
+			&tName,
+			&tDescription,
+			&tType,
+		)
 		if err != nil {
-			return nil, fmt.Errorf("character_repo.FindByID: %w", err)
+			return nil, fmt.Errorf("character_repo.FindAll: %w", err)
 		}
-		c.CursedTechniques = append(c.CursedTechniques, ct)
+
+		if dID.Valid {
+			c.Domain = &models.DomainExpansion{
+				ID:          dID.Int64,
+				CharacterID: c.ID,
+				Name:        dName.String,
+				Description: dDescription.String,
+			}
+		}
+
+		if tID.Valid {
+			c.CursedTechniques = append(c.CursedTechniques, models.CursedTechnique{
+				ID:          tID.Int64,
+				CharacterID: c.ID,
+				Name:        tName.String,
+				Description: tDescription.String,
+				Type:        tType.String,
+			})
+		}
+
+		c.FirstAppearance = &models.FirstAppearance{
+			EpisodeID:    e.ID,
+			EpisodeTitle: e.Title,
+		}
 	}
 
 	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("character_repo.FindByID: %w", err)
 	}
-
-	// Query Episode
-	var episode models.Episode
-	if err := r.db.QueryRow("SELECT id, title FROM episode WHERE id = ?", &ep).Scan(&episode.ID, &episode.Title); err != nil {
-		return nil, fmt.Errorf("character_repo.FindByID: %w", err)
-	}
-	c.FirstAppearance = &models.FirstAppearance{EpisodeID: episode.ID, EpisodeTitle: episode.Title}
 
 	return c, nil
 }
