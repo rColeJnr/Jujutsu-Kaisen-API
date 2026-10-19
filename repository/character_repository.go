@@ -157,6 +157,7 @@ func (r *sqlCharacterRepository) Update(id int64, req *models.UpdateCharacterReq
 	if err != nil {
 		return fmt.Errorf("character_repo.Update: %w", err)
 	}
+
 	defer sql.Close()
 
 	_, err = sql.Exec(args...)
@@ -247,19 +248,21 @@ func (r *sqlCharacterRepository) FindAll() ([]*models.Character, error) {
 			return nil, fmt.Errorf("character_repo.FindAll: %w", err)
 		}
 
-		func() {
+		ctErr := func() error {
 			defer ctRows.Close()
 			for ctRows.Next() {
 				var ct models.CursedTechnique
 				if err := ctRows.Scan(&ct.ID, &ct.CharacterID, &ct.Name, &ct.Description, &ct.Type); err != nil {
-					return
+					return err
 				}
 				char.CursedTechniques = append(char.CursedTechniques, ct)
 			}
+
+			return ctRows.Err()
 		}()
 
-		if err = ctRows.Err(); err != nil {
-			return nil, fmt.Errorf("character_repo.FindAll: %w", err)
+		if ctErr != nil {
+			return nil, fmt.Errorf("character_repo.FindAll: %w", ctErr)
 		}
 	}
 
@@ -280,7 +283,7 @@ func (r *sqlCharacterRepository) FindByID(id int64) (*models.Character, error) {
 		LEFT JOIN domain_expansion d ON c.id = d.character_id
 		LEFT JOIN episode e ON c.first_appearance_ep = e.id
 		LEFT JOIN cursed_technique t ON c.id = t.character_id
-		WHERE id = ?
+		WHERE c.id = ?
 	`
 
 	rows, err := r.db.Query(query, id)
@@ -325,7 +328,7 @@ func (r *sqlCharacterRepository) FindByID(id int64) (*models.Character, error) {
 			&tType,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("character_repo.FindAll: %w", err)
+			return nil, fmt.Errorf("character_repo.FindByID: %w", err)
 		}
 
 		if dID.Valid {

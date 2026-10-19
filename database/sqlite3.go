@@ -5,15 +5,16 @@ import (
 	"fmt"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/rcolejnr/jjk-api/models"
 )
 
-type SQLiteDB struct {
+type sqLiteDB struct {
 	db *sql.DB
 }
 
 // NewSQLite3Repo initializes the repository, creating and configuring the database and all the necessary tables
 // Database forces foreign_key.
-func NewSQLite3DB(dbfile string) (*SQLiteDB, error) {
+func NewSQLite3DB(dbfile string) (*sqLiteDB, error) {
 	db, err := sql.Open("sqlite3", fmt.Sprintf("%s?_pragma=foreign_keys(1)", dbfile))
 	if err != nil {
 		return nil, err
@@ -25,6 +26,7 @@ func NewSQLite3DB(dbfile string) (*SQLiteDB, error) {
 		return nil, err
 	}
 
+	// CHARACTERS
 	if _, err := CreateTableCharacter(db); err != nil {
 		return nil, err
 	}
@@ -41,17 +43,26 @@ func NewSQLite3DB(dbfile string) (*SQLiteDB, error) {
 		return nil, err
 	}
 
-	return &SQLiteDB{
+	// EPISODES
+	if _, err := models.CreateTableEpisode(db); err != nil {
+		return nil, err
+	}
+
+	if _, err := models.CreateTableEpisodeCharacter(db); err != nil {
+		return nil, err
+	}
+
+	return &sqLiteDB{
 		db: db,
 	}, nil
 }
 
-func (s *SQLiteDB) Close() error {
+func (s *sqLiteDB) Close() error {
 	return s.db.Close()
 }
 
 func CreateTableCharacter(db *sql.DB) (sql.Result, error) {
-	sql := `CREATE TABLE IF NOT EXISTS "character" (
+	sql := `CREATE TABLE IF NOT EXISTS character (
 		"id" INTEGER PRIMARY KEY,
 		"name" TEXT NOT NULL UNIQUE,
 		"description" TEXT NOT NULL,
@@ -75,7 +86,7 @@ func CreateTableCharacter(db *sql.DB) (sql.Result, error) {
 }
 
 func CreateTableDomainExpansion(db *sql.DB) (sql.Result, error) {
-	sql := `CREATE TABLE IF NOT EXISTS "domain_expansion" (
+	sql := `CREATE TABLE IF NOT EXISTS domain_expansion (
 		"id" INTEGER PRIMARY KEY,
 		"character_id" INTEGER NOT NULL,
 		"name" TEXT NOT NULL,
@@ -88,25 +99,25 @@ func CreateTableDomainExpansion(db *sql.DB) (sql.Result, error) {
 }
 
 func CreateTableCursedTechnique(db *sql.DB) (sql.Result, error) {
-	sql := `CREATE TABLE IF NOT EXISTS "cursed_technique" (
-		"id" INTEGER PRIMARY KEY,
-		"character_id" INTEGER NOT NULL,
-		"name" TEXT NOT NULL,
-		"description" TEXT,
-		"type" TEXT,
-		PRIMARY KEY("character_id", "id"),
-		FOREIGN KEY("character_id") REFERENCES character("id") ON DELETE CASCADE
+	sql := `CREATE TABLE IF NOT EXISTS cursed_technique (
+		id INTEGER PRIMARY KEY,
+		character_id INTEGER NOT NULL,
+		name TEXT NOT NULL,
+		description TEXT,
+		type TEXT,
+		PRIMARY KEY(character_id, id),
+		FOREIGN KEY(character_id) REFERENCES character(id) ON DELETE CASCADE
 	);`
 
 	return db.Exec(sql)
 }
 
 func CreateTableAliases(db *sql.DB) (sql.Result, error) {
-	sql := `CREATE TABLE IF NOT EXISTS "aliases (
-		"alias" TEXT NOT NULL,
-		"character_id" INTEGER,
-		PRIMARY KEY("character_id", "alias"),
-		FOREIGN KEY("character_id") REFERENCES character("id") ON DELETE CASCADE
+	sql := `CREATE TABLE IF NOT EXISTS aliases (
+		alias TEXT NOT NULL,
+		character_id INTEGER,
+		PRIMARY KEY(character_id, alias),
+		FOREIGN KEY(character_id) REFERENCES character(id) ON DELETE CASCADE
 	);`
 
 	return db.Exec(sql)
