@@ -18,7 +18,7 @@ func NewSQLite3DB(dbfile string) (*sqLiteDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close() // Need to remove this line, to keep db open during application runtime.
+	defer db.Close()
 
 	if err := db.Ping(); err != nil {
 		db.Close()
@@ -30,15 +30,17 @@ func NewSQLite3DB(dbfile string) (*sqLiteDB, error) {
 		return nil, err
 	}
 
+	if _, err := CreateTableAliases(db); err != nil {
+		return nil, err
+	}
+
+	// DOMAIN EXPANSION
 	if _, err := CreateTableDomainExpansion(db); err != nil {
 		return nil, err
 	}
 
+	// CURSED TECHNIQUE
 	if _, err := CreateTableCursedTechnique(db); err != nil {
-		return nil, err
-	}
-
-	if _, err := CreateTableAliases(db); err != nil {
 		return nil, err
 	}
 
@@ -48,6 +50,11 @@ func NewSQLite3DB(dbfile string) (*sqLiteDB, error) {
 	}
 
 	if _, err := CreateTableEpisodeCharacter(db); err != nil {
+		return nil, err
+	}
+
+	// TERMINOLOGY
+	if _, err := CreateTableTerminology(db); err != nil {
 		return nil, err
 	}
 
@@ -141,6 +148,17 @@ func CreateTableEpisodeCharacter(db *sql.DB) (sql.Result, error) {
 		PRIMARY KEY(episode_id, url),
 		FOREIGN KEY(episode_id) REFERENCES episode(id) ON DELETE CASCADE
 	);`
+
+	return db.Exec(sql)
+}
+
+func CreateTableTerminology(db *sql.DB) (sql.Result, error) {
+	sql := `CREATE TABLE IF NOT EXISTS terminology (
+		id INTEGER,
+		term TEXT NOT NULL,
+		meaning TEXT NOT NULL,
+		PRIMARY KEY(id)
+	)`
 
 	return db.Exec(sql)
 }
