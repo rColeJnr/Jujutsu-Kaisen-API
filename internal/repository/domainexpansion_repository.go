@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/rcolejnr/jjk-api/models"
+	"github.com/rcolejnr/jjk-api/internal/models"
 )
 
 // DomainExpansionRepository defines the contrat for domain expansion data access.
