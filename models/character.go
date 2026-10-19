@@ -26,45 +26,6 @@ type FirstAppearance struct {
 	EpisodeTitle string
 }
 
-type DomainExpansion struct {
-	ID          int64  `json:"id"`
-	CharacterID int64  `json:"character_id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-}
-
-type CreateDomainExpansionRequest struct {
-	CharacterID int64
-	Name        string
-	Description string
-}
-
-type UpdateDomainExpansionRequest struct {
-	Name        *string
-	Description *string
-}
-
-type CursedTechnique struct {
-	ID          int64  `json:"id"`
-	CharacterID int64  `json:"character_id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Type        string `json:"type"`
-}
-
-type CreateCursedTechniqueRequest struct {
-	CharacterID int64  `json:"character_id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Type        string `json:"type"`
-}
-
-type UpdateCursedTechnique struct {
-	Name        *string `json:"name"`
-	Description *string `json:"description"`
-	Type        *string `json:"type"`
-}
-
 type CreateCharacterRequest struct {
 	Name            string
 	Description     string

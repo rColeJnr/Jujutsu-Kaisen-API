@@ -160,7 +160,10 @@ func (r *sqlCharacterRepository) Update(id int64, req *models.UpdateCharacterReq
 
 	defer sql.Close()
 
-	_, err = sql.Exec(args...)
+	res, err := sql.Exec(args...)
+
+	_, err = res.RowsAffected()
+
 	return err
 }
 

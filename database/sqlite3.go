@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/rcolejnr/jjk-api/models"
 )
 
 type sqLiteDB struct {
@@ -44,11 +43,11 @@ func NewSQLite3DB(dbfile string) (*sqLiteDB, error) {
 	}
 
 	// EPISODES
-	if _, err := models.CreateTableEpisode(db); err != nil {
+	if _, err := CreateTableEpisode(db); err != nil {
 		return nil, err
 	}
 
-	if _, err := models.CreateTableEpisodeCharacter(db); err != nil {
+	if _, err := CreateTableEpisodeCharacter(db); err != nil {
 		return nil, err
 	}
 
@@ -92,7 +91,7 @@ func CreateTableDomainExpansion(db *sql.DB) (sql.Result, error) {
 		"name" TEXT NOT NULL,
 		"description" TEXT,
 		PRIMARY KEY("character_id", "id"),
-		FOREIGN KEY("character_id") REFERENCES character("id") ON DELETE CASCADE
+		FOREIGN KEY("character_id") REFERENCES character("id") ON DELETE SET NULL
 	);`
 
 	return db.Exec(sql)
@@ -106,7 +105,7 @@ func CreateTableCursedTechnique(db *sql.DB) (sql.Result, error) {
 		description TEXT,
 		type TEXT,
 		PRIMARY KEY(character_id, id),
-		FOREIGN KEY(character_id) REFERENCES character(id) ON DELETE CASCADE
+		FOREIGN KEY(character_id) REFERENCES character(id) ON DELETE SET NULL
 	);`
 
 	return db.Exec(sql)
@@ -118,6 +117,29 @@ func CreateTableAliases(db *sql.DB) (sql.Result, error) {
 		character_id INTEGER,
 		PRIMARY KEY(character_id, alias),
 		FOREIGN KEY(character_id) REFERENCES character(id) ON DELETE CASCADE
+	);`
+
+	return db.Exec(sql)
+}
+
+func CreateTableEpisode(db *sql.DB) (sql.Result, error) {
+	sql := `CREATE TABLE IF NOT EXISTS episode (
+		id INTEGER PRIMARY KEY,
+		season INTEGER NOT NULL,
+		title TEXT NOT NULL,
+		image TEXT,
+		air_date TEXT,
+	);`
+
+	return db.Exec(sql)
+}
+
+func CreateTableEpisodeCharacter(db *sql.DB) (sql.Result, error) {
+	sql := `CREATE TABLE IF NOT EXISTS episode_character (
+		url TEXT NOT NULL,
+		episode_id INTEGER,
+		PRIMARY KEY(episode_id, url),
+		FOREIGN KEY(episode_id) REFERENCES episode(id) ON DELETE CASCADE
 	);`
 
 	return db.Exec(sql)

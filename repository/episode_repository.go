@@ -30,10 +30,12 @@ func NewEpisodeRepository(db *sql.DB) EpisodeRepository {
 func (r *sqlEpisodeRepository) Insert(req *models.CreateEpisodeRequest) (int64, error) {
 	r.Lock()
 	defer r.Unlock()
+
 	sql, err := r.db.Prepare("INSERT INTO epsisode VALUES(NULL, ?,?,?,?)")
 	if err != nil {
 		return 0, fmt.Errorf("episode_repo.Insert: %w", err)
 	}
+
 	defer sql.Close()
 
 	result, err := sql.Exec(req.Season, req.Title, req.Image, req.AirDate)
@@ -107,12 +109,14 @@ func (r *sqlEpisodeRepository) Update(id int64, req *models.UpdateEpisodeRequest
 
 	sql, err := r.db.Prepare(query)
 	if err != nil {
-		return fmt.Errorf("episode_repo.Update: %w", err)
+		return fmt.Errorf("domainexpansion_repository.Update: %w", err)
 	}
 
 	defer sql.Close()
 
-	_, err = sql.Exec(args...)
+	res, err := sql.Exec(args...)
+
+	_, err = res.RowsAffected()
 
 	return err
 }
@@ -218,7 +222,7 @@ func (r *sqlEpisodeRepository) FindByID(id int64) (*models.Episode, error) {
 	return e, nil
 }
 
-func (r *sqlEpisodeRepository) Delete(int64) error {
+func (r *sqlEpisodeRepository) Delete(id int64) error {
 	r.RLock()
 	defer r.RUnlock()
 
