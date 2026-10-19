@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/rcolejnr/jjk-api/models"
+	"github.com/rcolejnr/jjk-api/internal/models"
 )
 
 // EpisodeRepository defines the contract for episodes data access.
