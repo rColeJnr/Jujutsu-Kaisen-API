@@ -7,18 +7,17 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-type sqLiteDB struct {
-	db *sql.DB
+type SQLiteDB struct {
+	DB *sql.DB
 }
 
 // NewSQLite3Repo initializes the repository, creating and configuring the database and all the necessary tables
 // Database forces foreign_key.
-func NewSQLite3DB(dbfile string) (*sqLiteDB, error) {
+func NewSQLite3DB(dbfile string) (*SQLiteDB, error) {
 	db, err := sql.Open("sqlite3", fmt.Sprintf("%s?_pragma=foreign_keys(1)", dbfile))
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 
 	if err := db.Ping(); err != nil {
 		db.Close()
@@ -26,99 +25,99 @@ func NewSQLite3DB(dbfile string) (*sqLiteDB, error) {
 	}
 
 	// CHARACTERS
-	if _, err := CreateTableCharacter(db); err != nil {
-		return nil, err
+	if _, err := createTableCharacter(db); err != nil {
+		return nil, fmt.Errorf("Error on createTableCharacter: %w", err)
 	}
 
-	if _, err := CreateTableAliases(db); err != nil {
-		return nil, err
-	}
+	// if _, err := createTableAliases(db); err != nil {
+	// 	return nil, fmt.Errorf("Error on createTableCharacter: %w", err)
+	// }
 
 	// DOMAIN EXPANSION
-	if _, err := CreateTableDomainExpansion(db); err != nil {
-		return nil, err
+	if _, err := createTableDomainExpansion(db); err != nil {
+		return nil, fmt.Errorf("Error on createTableDomainExpansion: %w", err)
 	}
 
 	// CURSED TECHNIQUE
-	if _, err := CreateTableCursedTechnique(db); err != nil {
-		return nil, err
+	if _, err := createTableCursedTechnique(db); err != nil {
+		return nil, fmt.Errorf("Error on createTableCursedTechnique: %w", err)
 	}
 
 	// EPISODES
-	if _, err := CreateTableEpisode(db); err != nil {
-		return nil, err
+	if _, err := createTableEpisode(db); err != nil {
+		return nil, fmt.Errorf("Error on createTableEpisode: %w", err)
 	}
 
-	if _, err := CreateTableEpisodeCharacter(db); err != nil {
-		return nil, err
+	if _, err := createTableEpisodeCharacter(db); err != nil {
+		return nil, fmt.Errorf("Error on createTableEpisodeCharacter: %w", err)
 	}
 
 	// TERMINOLOGY
-	if _, err := CreateTableTerminology(db); err != nil {
-		return nil, err
+	if _, err := createTableTerminology(db); err != nil {
+		return nil, fmt.Errorf("Error on createTableTerminology: %w", err)
 	}
 
-	return &sqLiteDB{
-		db: db,
+	return &SQLiteDB{
+		DB: db,
 	}, nil
 }
 
-func (s *sqLiteDB) Close() error {
-	return s.db.Close()
+func (s *SQLiteDB) Close() error {
+	return s.DB.Close()
 }
 
-func CreateTableCharacter(db *sql.DB) (sql.Result, error) {
+func createTableCharacter(db *sql.DB) (sql.Result, error) {
 	sql := `CREATE TABLE IF NOT EXISTS character (
-		"id" INTEGER PRIMARY KEY,
-		"name" TEXT NOT NULL UNIQUE,
-		"description" TEXT,
-		"image" TEXT,
-		"species" TEXT NOT NULL,
-		"status" TEXT NOT NULL,
-		"birthday" TEXT,
-		"age" INTERGER,
-		"gender" TEXT,
-		"height" INTEGER,
-		"weight" NUMERIC,
-		"hair_color" TEXT, 
-		"eye_color" TEXT,
-		"grade" TEXT,
-		"clan" TEXT,
-		"first_appearance_ep" INTEGER NOT NULL,
-		"FOREIGN KEY("first_appearance_ep") REFERENCES "episode"("id") ON DELETE RESTRICT 
+		id INTEGER PRIMARY KEY,
+		name TEXT NOT NULL UNIQUE,
+		description TEXT,
+		image TEXT,
+		species TEXT NOT NULL,
+		status TEXT NOT NULL,
+		birthday TEXT,
+		age INTERGER,
+		gender TEXT,
+		height INTEGER,
+		weight NUMERIC,
+		hair_color TEXT, 
+		eye_color TEXT,
+		grade TEXT,
+		clan TEXT,
+		first_appearance_ep INTEGER NOT NULL,
+		FOREIGN KEY(first_appearance_ep) REFERENCES episode(id) ON DELETE RESTRICT
 	);`
 
 	return db.Exec(sql)
 }
 
-func CreateTableDomainExpansion(db *sql.DB) (sql.Result, error) {
+func createTableDomainExpansion(db *sql.DB) (sql.Result, error) {
 	sql := `CREATE TABLE IF NOT EXISTS domain_expansion (
-		"id" INTEGER PRIMARY KEY,
+		"id" INTEGER,
 		"character_id" INTEGER NOT NULL,
 		"name" TEXT NOT NULL,
 		"description" TEXT,
-		PRIMARY KEY("character_id", "id"),
+		PRIMARY KEY("id"),
 		FOREIGN KEY("character_id") REFERENCES character("id") ON DELETE SET NULL
 	);`
 
 	return db.Exec(sql)
 }
 
-func CreateTableCursedTechnique(db *sql.DB) (sql.Result, error) {
+func createTableCursedTechnique(db *sql.DB) (sql.Result, error) {
 	sql := `CREATE TABLE IF NOT EXISTS cursed_technique (
-		id INTEGER PRIMARY KEY,
+		id INTEGER,
 		character_id INTEGER NOT NULL,
 		name TEXT NOT NULL,
 		description TEXT NOT NULL,
 		type TEXT,
-		PRIMARY KEY(character_id, id),
+		PRIMARY KEY(id),
 		FOREIGN KEY(character_id) REFERENCES character(id) ON DELETE SET NULL
 	);`
 
 	return db.Exec(sql)
 }
 
-func CreateTableAliases(db *sql.DB) (sql.Result, error) {
+func createTableAliases(db *sql.DB) (sql.Result, error) {
 	sql := `CREATE TABLE IF NOT EXISTS aliases (
 		alias TEXT NOT NULL,
 		character_id INTEGER,
@@ -129,30 +128,32 @@ func CreateTableAliases(db *sql.DB) (sql.Result, error) {
 	return db.Exec(sql)
 }
 
-func CreateTableEpisode(db *sql.DB) (sql.Result, error) {
+func createTableEpisode(db *sql.DB) (sql.Result, error) {
 	sql := `CREATE TABLE IF NOT EXISTS episode (
-		id INTEGER PRIMARY KEY,
+		id INTEGER,
 		season INTEGER NOT NULL,
-		title TEXT NOT NULL,
+		title TEXT NOT NULL UNIQUE,
 		image TEXT,
 		air_date TEXT,
+		PRIMARY KEY(id)
 	);`
 
 	return db.Exec(sql)
 }
 
-func CreateTableEpisodeCharacter(db *sql.DB) (sql.Result, error) {
+func createTableEpisodeCharacter(db *sql.DB) (sql.Result, error) {
 	sql := `CREATE TABLE IF NOT EXISTS episode_character (
+		id INTEGER,
 		url TEXT NOT NULL,
 		episode_id INTEGER,
-		PRIMARY KEY(episode_id, url),
+		PRIMARY KEY(id),
 		FOREIGN KEY(episode_id) REFERENCES episode(id) ON DELETE CASCADE
 	);`
 
 	return db.Exec(sql)
 }
 
-func CreateTableTerminology(db *sql.DB) (sql.Result, error) {
+func createTableTerminology(db *sql.DB) (sql.Result, error) {
 	sql := `CREATE TABLE IF NOT EXISTS terminology (
 		id INTEGER,
 		term TEXT NOT NULL,

@@ -11,7 +11,7 @@ type responseWriter struct {
 	statusCode int
 }
 
-func (rw *responseWriter) writeHeader(code int) {
+func (rw *responseWriter) WriteHeader(code int) {
 	rw.statusCode = code
 	rw.ResponseWriter.WriteHeader(code)
 }
@@ -26,7 +26,7 @@ func Logger(logger *slog.Logger) func(http.Handler) http.Handler {
 			next.ServeHTTP(wrapped, r)
 
 			logger.Info(
-				"request completed",
+				http.StatusText(wrapped.statusCode),
 				"method", r.Method,
 				"path", r.URL.Path,
 				"body", r.Body,

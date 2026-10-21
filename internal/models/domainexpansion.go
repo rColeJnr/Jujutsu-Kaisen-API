@@ -8,12 +8,13 @@ type DomainExpansion struct {
 }
 
 type CreateDomainExpansionRequest struct {
-	CharacterID int64
-	Name        string
-	Description string
+	CharacterID int64  `json:"character_id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }
 
 type UpdateDomainExpansionRequest struct {
-	Name        *string
-	Description *string
+	CharacterID *int64  `json:"character_id"`
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
 }

@@ -32,7 +32,7 @@ func (s *terminologyService) Insert(req *models.CreateTerminologyRequest) (int64
 		return 0, fmt.Errorf("validation: meaning can't be empty")
 	}
 
-	return s.Insert(req)
+	return s.repo.Insert(req)
 }
 
 func (s *terminologyService) Update(id int64, req *models.UpdateTerminologyRequest) error {
@@ -54,11 +54,11 @@ func (s *terminologyService) Update(id int64, req *models.UpdateTerminologyReque
 		return fmt.Errorf("validation: all update fields can't be empty")
 	}
 
-	return s.Update(id, req)
+	return s.repo.Update(id, req)
 }
 
 func (s *terminologyService) FindAll() ([]*models.Terminology, error) {
-	terminologies, err := s.FindAll()
+	terminologies, err := s.repo.FindAll()
 	if err != nil {
 		return nil, err
 	}

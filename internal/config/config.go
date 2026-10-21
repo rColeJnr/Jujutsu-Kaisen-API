@@ -10,7 +10,6 @@ import (
 type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
-	JWT      JWTConfig
 }
 
 type ServerConfig struct {
@@ -23,18 +22,13 @@ type DatabaseConfig struct {
 	DSN string // SQLite Data Source Name
 }
 
-type JWTConfig struct {
-	Secret      string
-	ExpireHours int
-}
-
 // Load reads environment variables and returns a populated Config struct.
 // It fails fast if required variables are missing.
 func Load() (*Config, error) {
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		return nil, fmt.Errorf("config: JWT_SECRET environment variable is required.")
-	}
+	// secret := os.Getenv("JWT_SECRET")
+	// if secret == "" {
+	// 	return nil, fmt.Errorf("config: JWT_SECRET environment variable is required.")
+	// }
 
 	dbDSN := os.Getenv("DATABASE_URL")
 	if dbDSN == "" {
@@ -50,10 +44,10 @@ func Load() (*Config, error) {
 		writeTimeout = 30
 	}
 
-	jwtExpire, _ := strconv.Atoi(os.Getenv(("JWT_EXPIRE_HOURS")))
-	if jwtExpire == 0 {
-		jwtExpire = 24
-	}
+	// jwtExpire, _ := strconv.Atoi(os.Getenv(("JWT_EXPIRE_HOURS")))
+	// if jwtExpire == 0 {
+	// 	jwtExpire = 24
+	// }
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -67,6 +61,5 @@ func Load() (*Config, error) {
 			WriteTimeoutSec: writeTimeout,
 		},
 		Database: DatabaseConfig{DSN: dbDSN},
-		JWT:      JWTConfig{Secret: secret, ExpireHours: jwtExpire},
 	}, nil
 }

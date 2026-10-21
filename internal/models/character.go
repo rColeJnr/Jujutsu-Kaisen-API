@@ -17,7 +17,7 @@ type Character struct {
 	Grade            string            `json:"grade"`
 	Clan             string            `json:"clan"`
 	CursedTechniques []CursedTechnique `json:"cursed_techniques,omitempty"`
-	Domain           *DomainExpansion  `json:"domain,omitempty"`
+	Domain           *DomainExpansion  `json:"domain_expansion,omitempty"`
 	FirstAppearance  *FirstAppearance  `json:"first_appearance,omitempty"`
 }
 
@@ -27,38 +27,39 @@ type FirstAppearance struct {
 }
 
 type CreateCharacterRequest struct {
-	Name            string
-	Description     string
-	Image           string
-	Species         string
-	Status          string
-	Birthday        string
-	Age             int
-	Gender          string
-	Height          int
-	Weight          float64
-	HairColor       string
-	EyeColor        string
-	Grade           string
-	Clan            string
-	FirstAppearance int64
+	Name              string  `json:"name"`
+	Description       string  `json:"description"`
+	Image             string  `json:"images,omitempty"`
+	Species           string  `json:"species"`
+	Status            string  `json:"status"`
+	Birthday          string  `json:"birthday"`
+	Age               int     `json:"age"`
+	Gender            string  `json:"gender"`
+	Height            int     `json:"height"`
+	Weight            float64 `json:"weight"`
+	HairColor         string  `json:"hair_color"`
+	EyeColor          string  `json:"eye_color"`
+	Grade             string  `json:"grade"`
+	Clan              string  `json:"clan"`
+	FirstAppearanceEp int64   `json:"first_appearance_ep,omitempty"`
 }
 
 type UpdateCharacterRequest struct {
-	Name        *string
-	Description *string
-	Image       *string
-	Species     *string
-	Status      *string
-	Birthday    *string
-	Age         *int
-	Gender      *string
-	Height      *int
-	Weight      *float64
-	HairColor   *string
-	EyeColor    *string
-	Grade       *string
-	Clan        *string
+	Name              *string  `json:"name"`
+	Description       *string  `json:"description"`
+	Image             *string  `json:"images,omitempty"`
+	Species           *string  `json:"species"`
+	Status            *string  `json:"status"`
+	Birthday          *string  `json:"birthday"`
+	Age               *int     `json:"age"`
+	Gender            *string  `json:"gender"`
+	Height            *int     `json:"height"`
+	Weight            *float64 `json:"weight"`
+	HairColor         *string  `json:"hair_color"`
+	EyeColor          *string  `json:"eye_color"`
+	Grade             *string  `json:"grade"`
+	Clan              *string  `json:"clan"`
+	FirstAppearanceEp *int64   `json:"first_appearance_ep,omitempty"`
 }
 
 // CharacterPaginatedResponse wraps a list of characters with pagination metadata.

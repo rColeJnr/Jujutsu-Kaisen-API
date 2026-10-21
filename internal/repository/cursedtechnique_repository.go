@@ -31,9 +31,9 @@ func (r *sqlCursedTechniqueRepository) Insert(req *models.CreateCursedTechniqueR
 	r.Lock()
 	defer r.Unlock()
 
-	sql, err := r.db.Prepare("INSERT INTO cursed_technique VALUES(NULL, character_id = ?, name = ?, description = ?, type = ?)")
+	sql, err := r.db.Prepare("INSERT INTO cursed_technique (character_id, name, description, type) VALUES(?,?,?,?)")
 	if err != nil {
-		return 0, fmt.Errorf("cursedtechnique_repository.Insert: %w", err)
+		return 0, fmt.Errorf("cursedtechnique_repository.Insert: here %w", err)
 	}
 
 	defer sql.Close()
@@ -99,7 +99,7 @@ func (r *sqlCursedTechniqueRepository) FindAll() ([]*models.CursedTechnique, err
 	defer r.RUnlock()
 
 	query := `
-		SELECT character_id, name, description, type
+		SELECT id, character_id, name, description, type
 		FROM cursed_technique
 	`
 
@@ -109,25 +109,26 @@ func (r *sqlCursedTechniqueRepository) FindAll() ([]*models.CursedTechnique, err
 	}
 	defer rows.Close()
 
-	var domains []*models.CursedTechnique
+	var cursedTechniques []*models.CursedTechnique
 	for rows.Next() {
-		var d models.CursedTechnique
+		var ct models.CursedTechnique
 		if err := rows.Scan(
-			&d.ID,
-			&d.CharacterID,
-			&d.Name,
-			&d.Description,
+			&ct.ID,
+			&ct.CharacterID,
+			&ct.Name,
+			&ct.Description,
+			&ct.Type,
 		); err != nil {
 			return nil, fmt.Errorf("cursedtechnique_repository.FindAll: %w", err)
 		}
-		domains = append(domains, &d)
+		cursedTechniques = append(cursedTechniques, &ct)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("cursedtechnique_repository.FindAll: %w", err)
 	}
 
-	return domains, nil
+	return cursedTechniques, nil
 }
 
 func (r *sqlCursedTechniqueRepository) FindByID(id int64) (*models.CursedTechnique, error) {

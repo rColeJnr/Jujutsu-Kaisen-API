@@ -26,7 +26,7 @@ func NewDomainExpansionService(cRepo repository.CharacterRepository, repo reposi
 }
 
 func (s *domainExpansionService) Insert(req *models.CreateDomainExpansionRequest) (int64, error) {
-	if req.CharacterID < 0 {
+	if req.CharacterID < 1 {
 		return 0, fmt.Errorf("validation: invalid character id")
 	}
 
@@ -42,10 +42,13 @@ func (s *domainExpansionService) Insert(req *models.CreateDomainExpansionRequest
 		return 0, fmt.Errorf("validation: domain expansion description can't be empty")
 	}
 
-	return s.Insert(req)
+	return s.repo.Insert(req)
 }
 
 func (s *domainExpansionService) Update(id int64, req *models.UpdateDomainExpansionRequest) error {
+	if *req.CharacterID < 1 {
+		return fmt.Errorf("validation: invalid character id")
+	}
 
 	if req.Name != nil {
 		trimmed := strings.TrimSpace(*req.Name)
@@ -64,11 +67,11 @@ func (s *domainExpansionService) Update(id int64, req *models.UpdateDomainExpans
 		return fmt.Errorf("validation: all update fields can't be empty§")
 	}
 
-	return s.Update(id, req)
+	return s.repo.Update(id, req)
 }
 
 func (s *domainExpansionService) FindAll() ([]*models.DomainExpansion, error) {
-	domainsExpansion, err := s.FindAll()
+	domainsExpansion, err := s.repo.FindAll()
 	if err != nil {
 		return nil, err
 	}

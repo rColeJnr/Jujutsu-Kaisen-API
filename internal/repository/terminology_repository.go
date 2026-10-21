@@ -11,7 +11,7 @@ import (
 
 type TerminologyRepository interface {
 	Insert(*models.CreateTerminologyRequest) (int64, error)
-	Update(*models.UpdateTerminologyRequest) error
+	Update(int64, *models.UpdateTerminologyRequest) error
 	FindAll() ([]*models.Terminology, error)
 	FindByID(int64) (*models.Terminology, error)
 }
@@ -48,7 +48,7 @@ func (r *sqlTerminologyRepository) Insert(req *models.CreateTerminologyRequest) 
 
 	return id, nil
 }
-func (r *sqlTerminologyRepository) Update(req *models.UpdateTerminologyRequest) error {
+func (r *sqlTerminologyRepository) Update(id int64, req *models.UpdateTerminologyRequest) error {
 	r.Lock()
 	defer r.Unlock()
 
@@ -68,7 +68,7 @@ func (r *sqlTerminologyRepository) Update(req *models.UpdateTerminologyRequest) 
 	if len(setClauses) == 0 {
 		return nil
 	}
-	args = append(args, *req.ID)
+	args = append(args, id)
 
 	query := fmt.Sprintf("UPDATE terminology SET %s WHERE id = ?", strings.Join(setClauses, ", "))
 	stmt, err := r.db.Prepare(query)
@@ -82,7 +82,7 @@ func (r *sqlTerminologyRepository) Update(req *models.UpdateTerminologyRequest) 
 	}
 
 	if rows, _ := result.RowsAffected(); rows == 0 {
-		return fmt.Errorf("terminology_repository.Update: no terminologies found with id %d", *req.ID)
+		return fmt.Errorf("terminology_repository.Update: no terminologies found with id %d", id)
 	}
 
 	return nil

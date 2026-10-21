@@ -32,7 +32,10 @@ func NewCharacterRepository(db *sql.DB) CharacterRepository {
 func (r *sqlCharacterRepository) Insert(req *models.CreateCharacterRequest) (int64, error) {
 	r.Lock()
 	defer r.Unlock()
-	sql, err := r.db.Prepare(`INSERT INTO character VALUES(NULL,?,?,?,?,?, ?,?,?,?,?, ?,?,?,?)`)
+	sql, err := r.db.Prepare(`INSERT INTO character (
+		name, description, image, species, status, birthday, age, 
+		gender, height, weight, hair_color, eye_color, grade, clan, first_appearance_ep
+	) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
 	if err != nil {
 		return 0, fmt.Errorf("character_repo.Insert: %w", err)
 	}
@@ -53,7 +56,7 @@ func (r *sqlCharacterRepository) Insert(req *models.CreateCharacterRequest) (int
 		req.EyeColor,
 		req.Grade,
 		req.Clan,
-		req.FirstAppearance,
+		req.FirstAppearanceEp,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("character_repo.Insert: %w", err)
@@ -191,7 +194,7 @@ func (r *sqlCharacterRepository) FindAll() ([]*models.Character, error) {
 	for rows.Next() {
 		var c models.Character
 		var ep int64 // first appearance episode
-		var e models.Episode
+		var e sql.NullString
 		var dID sql.NullInt64 // domain expansion
 		var dName, dDescription sql.NullString
 
@@ -215,12 +218,13 @@ func (r *sqlCharacterRepository) FindAll() ([]*models.Character, error) {
 			&dID,
 			&dName,
 			&dDescription,
-			&e.Title,
+			&e,
 		); err != nil {
 			return nil, fmt.Errorf("character_repo.FindAll: %w", err)
 		}
-
-		c.FirstAppearance = &models.FirstAppearance{EpisodeID: ep, EpisodeTitle: e.Title}
+		if e.Valid {
+			c.FirstAppearance = &models.FirstAppearance{EpisodeID: ep, EpisodeTitle: e.String}
+		}
 
 		if dID.Valid {
 			c.Domain = &models.DomainExpansion{
@@ -246,7 +250,7 @@ func (r *sqlCharacterRepository) FindAll() ([]*models.Character, error) {
 
 	// Query Cursed Techniques
 	for _, char := range characters {
-		ctRows, err := r.db.Query("SELECT id, character_id, name, description, type FROM cursed_techniques WHERE character_id = ?", char.ID)
+		ctRows, err := r.db.Query("SELECT id, character_id, name, description, type FROM cursed_technique WHERE character_id = ?", char.ID)
 		if err != nil && err != sql.ErrNoRows {
 			return nil, fmt.Errorf("character_repo.FindAll: %w", err)
 		}
@@ -291,15 +295,16 @@ func (r *sqlCharacterRepository) FindByID(id int64) (*models.Character, error) {
 
 	rows, err := r.db.Query(query, id)
 	if err != nil {
-		return nil, fmt.Errorf("character_repo.FindAll: %w", err)
+		return nil, fmt.Errorf("character_repo.FindByID: %w", err)
 	}
 	defer rows.Close()
 
 	c := &models.Character{}
+	found := false
 	for rows.Next() {
 		var (
 			ep                         int64 // first appearance episode
-			e                          models.Episode
+			eTitle                     sql.NullString
 			dID, tID                   sql.NullInt64 // domain expansion & cursed technique
 			dName, dDescription        sql.NullString
 			tName, tDescription, tType sql.NullString
@@ -324,7 +329,7 @@ func (r *sqlCharacterRepository) FindByID(id int64) (*models.Character, error) {
 			&dID,
 			&dName,
 			&dDescription,
-			&e.Title,
+			&eTitle,
 			&tID,
 			&tName,
 			&tDescription,
@@ -333,6 +338,8 @@ func (r *sqlCharacterRepository) FindByID(id int64) (*models.Character, error) {
 		if err != nil {
 			return nil, fmt.Errorf("character_repo.FindByID: %w", err)
 		}
+
+		found = true
 
 		if dID.Valid {
 			c.Domain = &models.DomainExpansion{
@@ -353,14 +360,20 @@ func (r *sqlCharacterRepository) FindByID(id int64) (*models.Character, error) {
 			})
 		}
 
-		c.FirstAppearance = &models.FirstAppearance{
-			EpisodeID:    e.ID,
-			EpisodeTitle: e.Title,
+		if eTitle.Valid {
+			c.FirstAppearance = &models.FirstAppearance{
+				EpisodeID:    ep,
+				EpisodeTitle: eTitle.String,
+			}
 		}
 	}
 
 	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("character_repo.FindByID: %w", err)
+	}
+
+	if !found {
+		return nil, fmt.Errorf("not_found: no character found with id: %d", id)
 	}
 
 	return c, nil
@@ -370,14 +383,14 @@ func (r *sqlCharacterRepository) Delete(id int64) error {
 	r.Lock()
 	defer r.Unlock()
 
-	sql := "DELETE FORM character WHERE id = ?"
+	sql := "DELETE FROM character WHERE id = ?"
 	result, err := r.db.Exec(sql, id)
 
 	if err != nil {
 		return fmt.Errorf("character_repo.Delete: %w", err)
 	}
 	if rows, _ := result.RowsAffected(); rows == 0 {
-		return fmt.Errorf("character_repo.Delete: no character found with id: %d", id)
+		return fmt.Errorf("not_found: no character found with id: %d", id)
 	}
 
 	return nil

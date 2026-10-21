@@ -31,7 +31,7 @@ func (s *characterService) Insert(req *models.CreateCharacterRequest) (int64, er
 		return 0, err
 	}
 
-	return s.Insert(req)
+	return s.characterRepo.Insert(req)
 }
 
 func (s *characterService) Update(id int64, req *models.UpdateCharacterRequest) error {
@@ -39,11 +39,11 @@ func (s *characterService) Update(id int64, req *models.UpdateCharacterRequest) 
 		return err
 	}
 
-	return s.Update(id, req)
+	return s.characterRepo.Update(id, req)
 }
 
 func (s *characterService) FindAll() ([]*models.Character, error) {
-	characters, err := s.FindAll()
+	characters, err := s.characterRepo.FindAll()
 	if err != nil {
 		return nil, err
 	}
@@ -63,48 +63,53 @@ func (s *characterService) FindByID(id int64) (*models.Character, error) {
 }
 
 func (s *characterService) Delete(id int64) error {
-	character, err := s.characterRepo.FindByID(id)
-	if err != nil {
-		return err
-	}
-	if character == nil {
-		return fmt.Errorf("character_service.Delete: character with id %d does not exist", id)
-	}
+
 	return s.characterRepo.Delete(id)
 }
 
 func reqValidation(req *models.CreateCharacterRequest) error {
-	if strings.TrimSpace(req.Name) == "" {
+	if trimmAndLowerCase(req.Name) == "" {
 		return fmt.Errorf("validation: name can't be empty.")
 	}
-	if species := strings.ToLower(strings.TrimSpace(req.Species)); species == "" {
+
+	if species := trimmAndLowerCase(req.Species); species == "" {
 		return fmt.Errorf("validation: species can't be empty.")
 	} else if !(species == "human" || species == "curse") {
 		return fmt.Errorf("validation: invalid species")
 	}
-	if strings.TrimSpace(req.Status) == "" {
+
+	if status := trimmAndLowerCase(req.Status); status == "" {
 		return fmt.Errorf("validation: status can't be empty.")
+	} else if !(status == "alive" || status == "dead" || status == "unknown") {
+		return fmt.Errorf("validation: invalid status")
 	}
-	if gender := strings.ToLower(strings.TrimSpace(req.Gender)); !(gender == "male" || gender == "female") {
+
+	if gender := trimmAndLowerCase(req.Gender); !(gender == "male" || gender == "female") {
 		return fmt.Errorf("validation: invalid gender")
 	}
-	if clan := strings.ToLower(strings.TrimSpace(req.Clan)); !(clan == "gojo" || clan == "zenin") {
+
+	if clan := trimmAndLowerCase(req.Clan); !(clan == "gojo" || clan == "zenin") {
 		return fmt.Errorf("validation: invalid clan")
 	}
-	if grade := strings.ToLower(strings.TrimSpace(req.Grade)); !(grade == "special grade" || grade == "1st grade" || grade == "2nd grade" || grade == "3rd grade") {
+
+	if grade := trimmAndLowerCase(req.Grade); !(grade == "special grade" || grade == "1st grade" || grade == "2nd grade" || grade == "3rd grade") {
 		return fmt.Errorf("validation: invalid grade")
 	}
+
 	if req.Age < 0 {
-		return fmt.Errorf("validation: height can't be less than 0.")
+		return fmt.Errorf("validation: age can't be less than 0.")
 	}
+
 	if req.Height <= 10 {
 		return fmt.Errorf("validation: height can't be less than 10.")
 	}
+
 	if req.Weight <= 0 {
 		return fmt.Errorf("validation: weight can't be less than 0.")
 	}
-	if req.FirstAppearance < 0 {
-		return fmt.Errorf("validation: episode can't be less than 0.")
+
+	if req.FirstAppearanceEp <= 0 {
+		return fmt.Errorf("validation: episode can't be less than 0, got: %d, %s.", req.FirstAppearanceEp, req.Name)
 	}
 
 	return nil
@@ -112,7 +117,7 @@ func reqValidation(req *models.CreateCharacterRequest) error {
 
 func reqUpdateValidation(req *models.UpdateCharacterRequest) error {
 	if req.Name != nil {
-		trimmed := strings.TrimSpace(*req.Name)
+		trimmed := trimmAndLowerCase(*req.Name)
 		if trimmed == "" {
 			return fmt.Errorf("validation: name can't be empty.")
 		}
@@ -120,7 +125,7 @@ func reqUpdateValidation(req *models.UpdateCharacterRequest) error {
 	}
 
 	if req.Species != nil {
-		trimmed := strings.TrimSpace(*req.Species)
+		trimmed := trimmAndLowerCase(*req.Species)
 		if trimmed == "" {
 			return fmt.Errorf("validation: species can't be empty.")
 		}
@@ -131,7 +136,7 @@ func reqUpdateValidation(req *models.UpdateCharacterRequest) error {
 	}
 
 	if req.Status != nil {
-		trimmed := strings.TrimSpace(*req.Status)
+		trimmed := trimmAndLowerCase(*req.Status)
 		if trimmed == "" {
 			return fmt.Errorf("validation: status can't be empty.")
 		}
@@ -142,7 +147,7 @@ func reqUpdateValidation(req *models.UpdateCharacterRequest) error {
 	}
 
 	if req.Gender != nil {
-		trimmed := strings.TrimSpace(*req.Gender)
+		trimmed := trimmAndLowerCase(*req.Gender)
 		if trimmed != "male" && trimmed != "femaile" {
 			return fmt.Errorf("validation: invalid gender")
 		}
@@ -150,7 +155,7 @@ func reqUpdateValidation(req *models.UpdateCharacterRequest) error {
 	}
 
 	if req.Clan != nil {
-		trimmed := strings.TrimSpace(*req.Clan)
+		trimmed := trimmAndLowerCase(*req.Clan)
 		if !(trimmed == "gojo" || trimmed == "zenin") {
 			return fmt.Errorf("validation: invalid clan")
 		}
@@ -158,7 +163,7 @@ func reqUpdateValidation(req *models.UpdateCharacterRequest) error {
 	}
 
 	if req.Grade != nil {
-		trimmed := strings.TrimSpace(*req.Grade)
+		trimmed := trimmAndLowerCase(*req.Grade)
 		if !(trimmed == "special grade" || trimmed == "1st grade" || trimmed == "2nd grade" || trimmed == "3rd grade") {
 			return fmt.Errorf("validation: invalid grade")
 		}
@@ -168,9 +173,11 @@ func reqUpdateValidation(req *models.UpdateCharacterRequest) error {
 	if req.Age != nil && *req.Age < 0 {
 		return fmt.Errorf("validation: age can't be less than 0.")
 	}
+
 	if req.Height != nil && *req.Height <= 10 {
 		return fmt.Errorf("validation: height can't be less than 10.")
 	}
+
 	if req.Weight != nil && *req.Weight <= 0 {
 		return fmt.Errorf("validation: weight can't be less than 0.")
 	}
@@ -181,4 +188,8 @@ func reqUpdateValidation(req *models.UpdateCharacterRequest) error {
 	}
 
 	return nil
+}
+
+func trimmAndLowerCase(s string) string {
+	return strings.ToLower(strings.TrimSpace(s))
 }

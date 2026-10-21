@@ -31,7 +31,7 @@ func (r *sqlDomainExpansionRepository) Insert(req *models.CreateDomainExpansionR
 	r.Lock()
 	defer r.Unlock()
 
-	sql, err := r.db.Prepare("INSERT INTO domain_expansion VALUES(NULL, character_id = ?, name = ?, description = ?)")
+	sql, err := r.db.Prepare("INSERT INTO domain_expansion (character_id, name, description) VALUES(?,?,?)")
 	if err != nil {
 		return 0, fmt.Errorf("domainexpansion_repository.Insert: %w", err)
 	}
@@ -57,6 +57,11 @@ func (r *sqlDomainExpansionRepository) Update(id int64, req *models.UpdateDomain
 
 	setClauses := []string{}
 	args := []any{}
+
+	if req.CharacterID != nil && *req.CharacterID > 0 {
+		setClauses = append(setClauses, "character_id = ?")
+		args = append(args, *req.CharacterID)
+	}
 
 	if req.Name != nil {
 		setClauses = append(setClauses, "name = ?")
@@ -94,7 +99,7 @@ func (r *sqlDomainExpansionRepository) FindAll() ([]*models.DomainExpansion, err
 	defer r.RUnlock()
 
 	query := `
-		SELECT character_id, name, description
+		SELECT id, character_id, name, description
 		FROM domain_expansion
 	`
 

@@ -42,7 +42,7 @@ func (s *ctechniqueService) Insert(req *models.CreateCursedTechniqueRequest) (in
 		return 0, fmt.Errorf("validation: technique description can't be empty")
 	}
 
-	return s.Insert(req)
+	return s.repo.Insert(req)
 }
 
 func (s *ctechniqueService) Update(id int64, req *models.UpdateCursedTechniqueRequest) error {
@@ -64,11 +64,11 @@ func (s *ctechniqueService) Update(id int64, req *models.UpdateCursedTechniqueRe
 		return fmt.Errorf("validation: all update fields can't be empty§")
 	}
 
-	return s.Update(id, req)
+	return s.repo.Update(id, req)
 }
 
 func (s *ctechniqueService) FindAll() ([]*models.CursedTechnique, error) {
-	cTechniques, err := s.FindAll()
+	cTechniques, err := s.repo.FindAll()
 	if err != nil {
 		return nil, err
 	}

@@ -42,7 +42,7 @@ func (s *episodeService) Insert(req *models.CreateEpisodeRequest) (int64, error)
 		return 0, fmt.Errorf("validation: characters can't be empty")
 	}
 
-	return s.Insert(req)
+	return s.repo.Insert(req)
 }
 
 func (s *episodeService) Update(id int64, req *models.UpdateEpisodeRequest) error {
@@ -66,11 +66,11 @@ func (s *episodeService) Update(id int64, req *models.UpdateEpisodeRequest) erro
 		return fmt.Errorf("validation: no fields provided for update")
 	}
 
-	return s.Update(id, req)
+	return s.repo.Update(id, req)
 }
 
 func (s *episodeService) FindAll() ([]*models.Episode, error) {
-	episodes, err := s.FindAll()
+	episodes, err := s.repo.FindAll()
 	if err != nil {
 		return nil, err
 	}

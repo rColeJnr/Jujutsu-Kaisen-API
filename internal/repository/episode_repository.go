@@ -31,7 +31,7 @@ func (r *sqlEpisodeRepository) Insert(req *models.CreateEpisodeRequest) (int64, 
 	r.Lock()
 	defer r.Unlock()
 
-	sql, err := r.db.Prepare("INSERT INTO epsisode VALUES(NULL, ?,?,?,?)")
+	sql, err := r.db.Prepare("INSERT INTO episode VALUES(NULL, ?,?,?,?)")
 	if err != nil {
 		return 0, fmt.Errorf("episode_repo.Insert: %w", err)
 	}
@@ -50,7 +50,7 @@ func (r *sqlEpisodeRepository) Insert(req *models.CreateEpisodeRequest) (int64, 
 
 	// Insert Characters
 	cErr := func() error {
-		csql, err := r.db.Prepare("INSERT INTO episode_character VALUES(?,?)")
+		csql, err := r.db.Prepare("INSERT INTO episode_character (url, episode_id) VALUES(?,?)")
 		if err != nil {
 			return err
 		}
@@ -67,7 +67,7 @@ func (r *sqlEpisodeRepository) Insert(req *models.CreateEpisodeRequest) (int64, 
 		return nil
 	}()
 	if cErr != nil {
-		return 0, fmt.Errorf("episode_repo.InsertCharacters: %w", err)
+		return 0, fmt.Errorf("episode_repo.InsertCharacters: %w", cErr)
 	}
 
 	return id, nil
@@ -126,7 +126,7 @@ func (r *sqlEpisodeRepository) FindAll() ([]*models.Episode, error) {
 	defer r.RUnlock()
 
 	query := `
-		SELECT e.id, e.season, e.title, e.image, e.air_date,
+		SELECT e.id, e.season, e.title, e.image, e.air_date
 		FROM episode e
 	`
 
@@ -158,7 +158,7 @@ func (r *sqlEpisodeRepository) FindAll() ([]*models.Episode, error) {
 
 	// Query episode characters
 	for _, ep := range episodes {
-		ecRows, err := r.db.Query("SELECT ulr FROM episoce_character WHERE episode_id = ?", ep.ID)
+		ecRows, err := r.db.Query("SELECT url FROM episode_character WHERE episode_id = ?", ep.ID)
 		if err != nil {
 			return nil, fmt.Errorf("episode_repo.FindAll: %w", err)
 		}
@@ -185,11 +185,11 @@ func (r *sqlEpisodeRepository) FindAll() ([]*models.Episode, error) {
 
 func (r *sqlEpisodeRepository) FindByID(id int64) (*models.Episode, error) {
 	r.RLock()
-	defer r.Unlock()
+	defer r.RUnlock()
 
 	query := `
-		SELECT e.id, e.season, e.title, e.image, e.air_date
-			ec.ulr
+		SELECT e.id, e.season, e.title, e.image, e.air_date,
+			ec.url
 		FROM episode e
 		LEFT JOIN episode_character ec ON e.id = ec.episode_id
 		WHERE e.id = ?
@@ -205,7 +205,7 @@ func (r *sqlEpisodeRepository) FindByID(id int64) (*models.Episode, error) {
 	e := &models.Episode{}
 	for rows.Next() {
 		var ec sql.NullString
-		err := rows.Scan(&e.ID, &e.Season, &e.Title, &e.Image, &e.AirDate)
+		err := rows.Scan(&e.ID, &e.Season, &e.Title, &e.Image, &e.AirDate, &ec)
 		if err != nil {
 			return nil, fmt.Errorf("episode_repo.FindByID: %w", err)
 		}
