@@ -39,7 +39,7 @@ func main() {
 	}
 	defer db.Close()
 
-	h := handler.Mux(db.DB, logger, cfg.Server.Port)
+	h := handler.Mux(db.DB, logger, cfg)
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%s", cfg.Server.Port),
