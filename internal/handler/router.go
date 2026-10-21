@@ -72,7 +72,6 @@ func Mux(db *sql.DB, logger *slog.Logger, port string) http.Handler {
 		AllowedMethods: []string{
 			http.MethodGet,
 			http.MethodPost,
-			http.MethodPut,
 			http.MethodPatch,
 			http.MethodDelete,
 			http.MethodOptions,
