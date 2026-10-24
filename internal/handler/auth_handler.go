@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/rcolejnr/jjk-api/internal/jwt"
@@ -23,7 +24,8 @@ func NewAuthHandler(authSvc service.AuthService) *AuthHandler {
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req models.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: "+err.Error()))
 		return
 	}
 

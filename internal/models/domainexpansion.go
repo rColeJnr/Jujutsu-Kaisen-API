@@ -18,7 +18,3 @@ type UpdateDomainExpansionRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
 }
-
-type DomainExpansionFilter struct {
-	Name string
-}

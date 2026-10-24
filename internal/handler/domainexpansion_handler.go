@@ -86,10 +86,7 @@ func (h *domainExpansioneHandler) Update(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *domainExpansioneHandler) FindAll(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
-	f := &models.DomainExpansionFilter{Name: strings.TrimSpace(query.Get("name"))}
-
-	c, err := h.svc.FindAll(f)
+	c, err := h.svc.FindAll()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return

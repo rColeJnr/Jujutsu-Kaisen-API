@@ -12,7 +12,7 @@ import (
 type DomainExpansionService interface {
 	Insert(*models.CreateDomainExpansionRequest) (int64, error)
 	Update(int64, *models.UpdateDomainExpansionRequest) error
-	FindAll(*models.DomainExpansionFilter) ([]*models.DomainExpansion, error)
+	FindAll() ([]*models.DomainExpansion, error)
 	FindByID(int64) (*models.DomainExpansion, error)
 }
 
@@ -70,8 +70,8 @@ func (s *domainExpansionService) Update(id int64, req *models.UpdateDomainExpans
 	return s.repo.Update(id, req)
 }
 
-func (s *domainExpansionService) FindAll(f *models.DomainExpansionFilter) ([]*models.DomainExpansion, error) {
-	domainsExpansion, err := s.repo.FindAll(f)
+func (s *domainExpansionService) FindAll() ([]*models.DomainExpansion, error) {
+	domainsExpansion, err := s.repo.FindAll()
 	if err != nil {
 		return nil, err
 	}
