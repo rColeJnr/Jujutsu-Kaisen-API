@@ -94,18 +94,13 @@ func (r *sqlTerminologyRepository) FindAll(f *models.TerminologyFilter) ([]*mode
 
 	query := "SELECT id, term, meaning FROM terminology"
 
+	var args []any
 	if f.Term != "" {
 		query += ` WHERE term LIKE ? ESCAPE '\'`
+		args = append(args, "%"+escapeLike(f.Term)+"%")
 	}
 
-	stmt, err := r.db.Prepare(query)
-	if err != nil {
-		return nil, fmt.Errorf("terminology_repository.FindAll: %w", err)
-	}
-
-	defer stmt.Close()
-
-	rows, err := r.db.Query(query, "%"+escapeLike(f.Term)+"%")
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("terminology_repository.FindAll: %w", err)
 	}

@@ -103,11 +103,13 @@ func (r *sqlDomainExpansionRepository) FindAll(f *models.DomainExpansionFilter) 
 		FROM domain_expansion
 	`
 
+	var args []any
 	if f.Name != "" {
 		query += ` WHERE name LIKE ? ESCAPE '\'`
+		args = append(args, "%"+escapeLike(f.Name)+"%")
 	}
 
-	rows, err := r.db.Query(query, "%"+escapeLike(f.Name)+"%")
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("domainexpansion_repository.FindAll: %w", err)
 	}

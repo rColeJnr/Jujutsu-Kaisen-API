@@ -14,7 +14,7 @@ type SQLiteDB struct {
 // NewSQLite3Repo initializes the repository, creating and configuring the database and all the necessary tables
 // Database forces foreign_key.
 func NewSQLite3DB(dbfile string) (*SQLiteDB, error) {
-	db, err := sql.Open("sqlite3", fmt.Sprintf("%s?_pragma=foreign_keys(1)", dbfile))
+	db, err := sql.Open("sqlite3", fmt.Sprintf("%s?_foreign_keys=1", dbfile))
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func createTableDomainExpansion(db *sql.DB) (sql.Result, error) {
 func createTableCursedTechnique(db *sql.DB) (sql.Result, error) {
 	sql := `CREATE TABLE IF NOT EXISTS cursed_technique (
 		id INTEGER,
-		character_id INTEGER NOT NULL UNIQUE,
+		character_id INTEGER NOT NULL,
 		name TEXT NOT NULL UNIQUE,
 		description TEXT NOT NULL,
 		type TEXT,
@@ -193,9 +193,6 @@ func createIndexes(db *sql.DB) error {
 		ON character (grade)`, // Loading the list of characters where grade = ?.
 		`CREATE INDEX IF NOT EXISTS idx_character_first_ep
 		ON character (first_appearance_ep)`, // Enables fast checks on character table on delete.
-
-		`CREATE INDEX IF NOT EXISTS idx_character_domain
-		ON domain_expansion (character_id)`, // Loading a character domain.
 
 		`CREATE INDEX IF NOT EXISTS idx_character_ctech
 		ON cursed_technique (character_id)`, // Loading a character cursed technique.

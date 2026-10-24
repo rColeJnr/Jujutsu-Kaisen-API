@@ -79,10 +79,10 @@ func (s *authService) Login(req *models.LoginRequest) (*models.AuthResponse, err
 	// IMPORTANT: Return the same generic error for both "user not found" and
 	// "wrong password" to prevent user enumeration attacks.
 	if admin == nil {
-		return nil, fmt.Errorf("invalid email")
+		return nil, fmt.Errorf("invalid email or password")
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(req.Password)); err != nil {
-		return nil, fmt.Errorf("invalid password")
+		return nil, fmt.Errorf("invalid email or password")
 	}
 
 	token, err := s.m.Generate(admin.ID, admin.Email)

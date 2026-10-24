@@ -130,16 +130,21 @@ func (r *sqlEpisodeRepository) FindAll(f *models.EpisodeFilter) ([]*models.Episo
 		FROM episode e
 	`
 
-	var args []any
-
+	var (
+		where []string
+		args  []any
+	)
 	if f.Season != 0 {
-		query += ` WHERE season = ?`
+		where = append(where, "season = ?")
 		args = append(args, f.Season)
 	}
-
 	if f.Title != "" {
-		query += ` WHERE title LIKE ? ESCAPE '\'`
+		where = append(where, `title LIKE ? ESCAPE '\'`)
 		args = append(args, "%"+escapeLike(f.Title)+"%")
+	}
+
+	if len(where) > 0 {
+		query += " WHERE " + strings.Join(where, " AND ")
 	}
 
 	rows, err := r.db.Query(query, args...)
@@ -235,14 +240,14 @@ func (r *sqlEpisodeRepository) FindByID(id int64) (*models.Episode, error) {
 }
 
 func (r *sqlEpisodeRepository) Delete(id int64) error {
-	r.RLock()
-	defer r.RUnlock()
+	r.Lock()
+	defer r.Unlock()
 
 	query := "DELETE FROM episode WHERE id = ?"
 	result, err := r.db.Exec(query, id)
 
 	if err != nil {
-		return fmt.Errorf("episode_repo.Delete: %w", err)
+		return fmt.Errorf("not_found: no episode with id: %d", id)
 	}
 
 	if rows, _ := result.RowsAffected(); rows == 0. {

@@ -103,11 +103,13 @@ func (r *sqlCursedTechniqueRepository) FindAll(f *models.CursedTechniqueFilter) 
 		FROM cursed_technique
 	`
 
+	var args []any
 	if f.Name != "" {
 		query += ` WHERE name LIKE ? ESCAPE '\'`
+		args = append(args, "%"+escapeLike(f.Name)+"%")
 	}
 
-	rows, err := r.db.Query(query, "%"+escapeLike(f.Name)+"%")
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("cursedtechnique_repository.FindAll: %w", err)
 	}
