@@ -13,7 +13,7 @@ import (
 type CharacterRepository interface {
 	Insert(*models.CreateCharacterRequest) (int64, error)
 	Update(int64, *models.UpdateCharacterRequest) error
-	FindAll() ([]*models.Character, error)
+	FindAll(*models.CharacterFilter) ([]*models.Character, error)
 	FindByID(int64) (*models.Character, error)
 	Delete(int64) error
 }
@@ -170,7 +170,7 @@ func (r *sqlCharacterRepository) Update(id int64, req *models.UpdateCharacterReq
 	return err
 }
 
-func (r *sqlCharacterRepository) FindAll() ([]*models.Character, error) {
+func (r *sqlCharacterRepository) FindAll(f *models.CharacterFilter) ([]*models.Character, error) {
 	r.RLock()
 	defer r.RUnlock()
 
@@ -184,7 +184,37 @@ func (r *sqlCharacterRepository) FindAll() ([]*models.Character, error) {
 		LEFT JOIN episode e ON c.first_appearance_ep = e.id
 	`
 
-	rows, err := r.db.Query(query)
+	var (
+		where []string
+		args  []any
+	)
+
+	if f.Name != "" {
+		where = append(where, `c.name LIKE ? ESCAPE '\'`)
+		args = append(args, "%"+escapeLike(f.Name)+"%")
+	}
+	if f.Status != "" {
+		where = append(where, "c.status = ? COLLATE NOCASE")
+		args = append(args, f.Status)
+	}
+	if f.Species != "" {
+		where = append(where, "c.species = ? COLLATE NOCASE")
+		args = append(args, f.Species)
+	}
+	if f.Grade != "" {
+		where = append(where, "c.grade = ? COLLATE NOCASE")
+		args = append(args, f.Grade)
+	}
+	if f.Gender != "" {
+		where = append(where, "c.gender = ? COLLATE NOCASE")
+		args = append(args, f.Gender)
+	}
+
+	if len(where) > 0 {
+		query += " WHERE " + strings.Join(where, " AND ")
+	}
+
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("character_repo.FindAll: %w", err)
 	}
@@ -235,7 +265,7 @@ func (r *sqlCharacterRepository) FindAll() ([]*models.Character, error) {
 			}
 		}
 
-		c.CursedTechniques = []models.CursedTechnique{}
+		c.CursedTechniques = []*models.CursedTechnique{}
 
 		characters = append(characters, &c)
 	}
@@ -262,7 +292,7 @@ func (r *sqlCharacterRepository) FindAll() ([]*models.Character, error) {
 				if err := ctRows.Scan(&ct.ID, &ct.CharacterID, &ct.Name, &ct.Description, &ct.Type); err != nil {
 					return err
 				}
-				char.CursedTechniques = append(char.CursedTechniques, ct)
+				char.CursedTechniques = append(char.CursedTechniques, &ct)
 			}
 
 			return ctRows.Err()
@@ -351,7 +381,7 @@ func (r *sqlCharacterRepository) FindByID(id int64) (*models.Character, error) {
 		}
 
 		if tID.Valid {
-			c.CursedTechniques = append(c.CursedTechniques, models.CursedTechnique{
+			c.CursedTechniques = append(c.CursedTechniques, &models.CursedTechnique{
 				ID:          tID.Int64,
 				CharacterID: c.ID,
 				Name:        tName.String,

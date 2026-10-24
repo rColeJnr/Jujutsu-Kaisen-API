@@ -89,7 +89,16 @@ func (h *characterHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *characterHandler) FindAll(w http.ResponseWriter, r *http.Request) {
-	c, err := h.svc.FindAll()
+	query := r.URL.Query()
+	filters := &models.CharacterFilter{
+		Name:    strings.TrimSpace(query.Get("name")),
+		Status:  strings.TrimSpace(query.Get("status")),
+		Species: strings.TrimSpace(query.Get("species")),
+		Grade:   strings.TrimSpace(query.Get("grade")),
+		Gender:  strings.TrimSpace(query.Get("gender")),
+	}
+
+	c, err := h.svc.FindAll(filters)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
