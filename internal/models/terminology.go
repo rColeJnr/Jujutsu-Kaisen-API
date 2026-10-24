@@ -14,7 +14,3 @@ type UpdateTerminologyRequest struct {
 	Term    *string `json:"term"`
 	Meaning *string `json:"meaning"`
 }
-
-type TerminologyFilter struct {
-	Term string
-}

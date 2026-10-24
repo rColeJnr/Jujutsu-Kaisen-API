@@ -87,14 +87,7 @@ func (h *episodeHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *episodeHandler) FindAll(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
-	season, _ := strconv.Atoi(query.Get("season"))
-	f := &models.EpisodeFilter{
-		Season: season,
-		Title:  strings.TrimSpace(query.Get("title")),
-	}
-
-	c, err := h.svc.FindAll(f)
+	c, err := h.svc.FindAll()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return

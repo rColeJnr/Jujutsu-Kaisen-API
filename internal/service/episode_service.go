@@ -12,7 +12,7 @@ import (
 type EpisodeService interface {
 	Insert(*models.CreateEpisodeRequest) (int64, error)
 	Update(int64, *models.UpdateEpisodeRequest) error
-	FindAll(*models.EpisodeFilter) ([]*models.Episode, error)
+	FindAll() ([]*models.Episode, error)
 	FindByID(int64) (*models.Episode, error)
 	Delete(int64) error
 }
@@ -69,8 +69,8 @@ func (s *episodeService) Update(id int64, req *models.UpdateEpisodeRequest) erro
 	return s.repo.Update(id, req)
 }
 
-func (s *episodeService) FindAll(f *models.EpisodeFilter) ([]*models.Episode, error) {
-	episodes, err := s.repo.FindAll(f)
+func (s *episodeService) FindAll() ([]*models.Episode, error) {
+	episodes, err := s.repo.FindAll()
 	if err != nil {
 		return nil, err
 	}

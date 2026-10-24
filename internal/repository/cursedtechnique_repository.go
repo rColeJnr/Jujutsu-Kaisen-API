@@ -13,7 +13,7 @@ import (
 type CursedTechniqueRepository interface {
 	Insert(*models.CreateCursedTechniqueRequest) (int64, error)
 	Update(int64, *models.UpdateCursedTechniqueRequest) error
-	FindAll(*models.CursedTechniqueFilter) ([]*models.CursedTechnique, error)
+	FindAll() ([]*models.CursedTechnique, error)
 	FindByID(int64) (*models.CursedTechnique, error)
 	Delete(int64) error
 }
@@ -94,7 +94,7 @@ func (r *sqlCursedTechniqueRepository) Update(id int64, req *models.UpdateCursed
 	return err
 }
 
-func (r *sqlCursedTechniqueRepository) FindAll(f *models.CursedTechniqueFilter) ([]*models.CursedTechnique, error) {
+func (r *sqlCursedTechniqueRepository) FindAll() ([]*models.CursedTechnique, error) {
 	r.RLock()
 	defer r.RUnlock()
 
@@ -103,13 +103,7 @@ func (r *sqlCursedTechniqueRepository) FindAll(f *models.CursedTechniqueFilter) 
 		FROM cursed_technique
 	`
 
-	var args []any
-	if f.Name != "" {
-		query += ` WHERE name LIKE ? ESCAPE '\'`
-		args = append(args, "%"+escapeLike(f.Name)+"%")
-	}
-
-	rows, err := r.db.Query(query, args...)
+	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("cursedtechnique_repository.FindAll: %w", err)
 	}

@@ -20,7 +20,3 @@ type UpdateCursedTechniqueRequest struct {
 	Description *string `json:"description"`
 	Type        *string `json:"type"`
 }
-
-type CursedTechniqueFilter struct {
-	Name string
-}
