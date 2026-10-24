@@ -56,7 +56,7 @@ func (s *authService) Register(req *models.RegisterRequest) (*models.AuthRespons
 		return nil, fmt.Errorf("authService.register: failed to create admin: %w", err)
 	}
 
-	token, err := s.m.Generate(admin.ID, admin.Email, string(hash))
+	token, err := s.m.Generate(admin.ID, admin.Email)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (s *authService) Login(req *models.LoginRequest) (*models.AuthResponse, err
 		return nil, fmt.Errorf("auth: invalid email or password")
 	}
 
-	token, err := s.m.Generate(admin.ID, admin.Email, req.Password)
+	token, err := s.m.Generate(admin.ID, admin.Email)
 	if err != nil {
 		return nil, err
 	}
