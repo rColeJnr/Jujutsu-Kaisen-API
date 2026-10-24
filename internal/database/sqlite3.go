@@ -80,7 +80,7 @@ func createTableCharacter(db *sql.DB) (sql.Result, error) {
 		species TEXT NOT NULL,
 		status TEXT NOT NULL,
 		birthday TEXT,
-		age INTERGER,
+		age INTEGER,
 		gender TEXT,
 		height INTEGER,
 		weight NUMERIC,
@@ -102,7 +102,7 @@ func createTableDomainExpansion(db *sql.DB) (sql.Result, error) {
 		"name" TEXT NOT NULL,
 		"description" TEXT,
 		PRIMARY KEY("id"),
-		FOREIGN KEY("character_id") REFERENCES character("id") ON DELETE SET NULL
+		FOREIGN KEY("character_id") REFERENCES character("id") ON DELETE RESTRICT
 	);`
 
 	return db.Exec(sql)
@@ -116,7 +116,7 @@ func createTableCursedTechnique(db *sql.DB) (sql.Result, error) {
 		description TEXT NOT NULL,
 		type TEXT,
 		PRIMARY KEY(id),
-		FOREIGN KEY(character_id) REFERENCES character(id) ON DELETE SET NULL
+		FOREIGN KEY(character_id) REFERENCES character(id) ON DELETE RESTRICT
 	);`
 
 	return db.Exec(sql)

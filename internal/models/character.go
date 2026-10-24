@@ -22,8 +22,8 @@ type Character struct {
 }
 
 type FirstAppearance struct {
-	EpisodeID    int64
-	EpisodeTitle string
+	EpisodeID    int64  `json:"episode_id"`
+	EpisodeTitle string `json:"episode_title"`
 }
 
 type CreateCharacterRequest struct {

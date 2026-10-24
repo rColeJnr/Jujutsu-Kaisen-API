@@ -112,7 +112,7 @@ func (s *authService) Update(email string, req *models.UpdateRequest) error {
 		return fmt.Errorf("auth: failed to hash password: %w", err)
 	}
 
-	s.r.Update(email, string(hash))
+	err = s.r.Update(email, string(hash))
 
-	return nil
+	return err
 }
