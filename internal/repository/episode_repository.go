@@ -13,7 +13,7 @@ import (
 type EpisodeRepository interface {
 	Insert(*models.CreateEpisodeRequest) (int64, error)
 	Update(int64, *models.UpdateEpisodeRequest) error
-	FindAll() ([]*models.Episode, error)
+	FindAll(*models.EpisodeFilter) ([]*models.Episode, error)
 	FindByID(int64) (*models.Episode, error)
 	Delete(int64) error
 }
@@ -121,7 +121,7 @@ func (r *sqlEpisodeRepository) Update(id int64, req *models.UpdateEpisodeRequest
 	return err
 }
 
-func (r *sqlEpisodeRepository) FindAll() ([]*models.Episode, error) {
+func (r *sqlEpisodeRepository) FindAll(f *models.EpisodeFilter) ([]*models.Episode, error) {
 	r.RLock()
 	defer r.RUnlock()
 
@@ -130,7 +130,24 @@ func (r *sqlEpisodeRepository) FindAll() ([]*models.Episode, error) {
 		FROM episode e
 	`
 
-	rows, err := r.db.Query(query)
+	var (
+		where []string
+		args  []any
+	)
+	if f.Season != 0 {
+		where = append(where, "season = ?")
+		args = append(args, f.Season)
+	}
+	if f.Title != "" {
+		where = append(where, `title LIKE ? ESCAPE '\'`)
+		args = append(args, "%"+escapeLike(f.Title)+"%")
+	}
+
+	if len(where) > 0 {
+		query += " WHERE " + strings.Join(where, " AND ")
+	}
+
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("episode_repo.FindAll: %w", err)
 	}
@@ -223,14 +240,14 @@ func (r *sqlEpisodeRepository) FindByID(id int64) (*models.Episode, error) {
 }
 
 func (r *sqlEpisodeRepository) Delete(id int64) error {
-	r.RLock()
-	defer r.RUnlock()
+	r.Lock()
+	defer r.Unlock()
 
 	query := "DELETE FROM episode WHERE id = ?"
 	result, err := r.db.Exec(query, id)
 
 	if err != nil {
-		return fmt.Errorf("episode_repo.Delete: %w", err)
+		return fmt.Errorf("not_found: no episode with id: %d", id)
 	}
 
 	if rows, _ := result.RowsAffected(); rows == 0. {

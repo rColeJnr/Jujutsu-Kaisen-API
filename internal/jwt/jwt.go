@@ -29,11 +29,10 @@ func NewManager(secret string, expireHours int) *Manager {
 }
 
 // Generate creates a signed JWT string for a given user.
-func (m *Manager) Generate(id int64, email, password string) (string, error) {
+func (m *Manager) Generate(id int64, email string) (string, error) {
 	claims := jwtCustomClaims{
 		models.Claims{ID: id,
-			Email:    email,
-			Password: password},
+			Email: email},
 		jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(m.ExpireHours) * time.Hour)),
 			IssuedAt: jwt.NewNumericDate(time.Now()),
 			Issuer:   "jjk-api"},

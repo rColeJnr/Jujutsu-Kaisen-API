@@ -1,1 +1,9 @@
-cmd/jjk_api/.env
+# macOS
+.DS_Store
+
+# Build output and local database
+cmd/jjk_api/jjk_api
+*.db
+
+# Env
+.env

@@ -28,7 +28,6 @@ type AuthResponse struct {
 }
 
 type Claims struct {
-	ID       int64  `json:"id"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	ID    int64  `json:"id"`
+	Email string `json:"email"`
 }
