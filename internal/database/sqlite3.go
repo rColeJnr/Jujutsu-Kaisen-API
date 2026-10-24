@@ -57,6 +57,11 @@ func NewSQLite3DB(dbfile string) (*SQLiteDB, error) {
 		return nil, fmt.Errorf("Error on createTableTerminology: %w", err)
 	}
 
+	// ADMIN
+	if _, err := createTableAdmin(db); err != nil {
+		return nil, fmt.Errorf("Error on createTableAdmin: %w", err)
+	}
+
 	return &SQLiteDB{
 		DB: db,
 	}, nil
@@ -117,12 +122,13 @@ func createTableCursedTechnique(db *sql.DB) (sql.Result, error) {
 	return db.Exec(sql)
 }
 
-func createTableAliases(db *sql.DB) (sql.Result, error) {
-	sql := `CREATE TABLE IF NOT EXISTS aliases (
-		alias TEXT NOT NULL,
-		character_id INTEGER,
-		PRIMARY KEY(character_id, alias),
-		FOREIGN KEY(character_id) REFERENCES character(id) ON DELETE CASCADE
+func createTableAdmin(db *sql.DB) (sql.Result, error) {
+	sql := `CREATE TABLE IF NOT EXISTS admin (
+		id INTEGER,
+		email TEXT NOT NULL UNIQUE,
+		password TEXT NOT NULL,
+		created_at TIMESTAMP,
+		PRIMARY KEY(id)
 	);`
 
 	return db.Exec(sql)
