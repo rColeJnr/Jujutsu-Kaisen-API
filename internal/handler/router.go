@@ -19,7 +19,7 @@ const (
 	// CharacterID is the character identifier
 	CharacterID = "id"
 
-	// CharacterRoute is When http.MethodPut the path to create a new character.
+	// CharacterRoute is When http.MethodPOST the path to create a new character.
 	// when http.MethodGet the path to get a list of characters
 	CharacterRoute = "/api/character"
 
@@ -31,7 +31,7 @@ const (
 	// CursedTechniqueID is the cursed technique identifier
 	CursedTechniqueID = "id"
 
-	// CursedTechniqueRoute is When http.MethodPut the path to create a new cursed technique.
+	// CursedTechniqueRoute is When http.MethodPOST the path to create a new cursed technique.
 	// when http.MethodGet the path to get a list of cursed techniques.
 	CursedTechniqueRoute = "/api/cursedtechnique"
 
@@ -43,7 +43,7 @@ const (
 	// DomainExpansionID is the domain expansion identifier
 	DomainExpansionID = "id"
 
-	// DomainExpansionRoute is When http.MethodPut the path to create a new DomainExpansion.
+	// DomainExpansionRoute is When http.MethodPOST the path to create a new DomainExpansion.
 	// when http.MethodGet the path to get a list of DomainExpansions.
 	DomainExpansionRoute = "/api/domainexpansion"
 
@@ -55,7 +55,7 @@ const (
 	// EpisodeID is the episode identifier
 	EpisodeID = "id"
 
-	// EpisodeRoute is When http.MethodPut the path to create a new episode.
+	// EpisodeRoute is When http.MethodPOST the path to create a new episode.
 	// when http.MethodGet the path to get a list of episodes.
 	EpisodeRoute = "/api/episode"
 
@@ -67,7 +67,7 @@ const (
 	// TerminologyID is the terminology identifier
 	TerminologyID = "id"
 
-	// TerminologyRoute is When http.MethodPut the path to create a new Terminology.
+	// TerminologyRoute is When http.MethodPOST the path to create a new Terminology.
 	// when http.MethodGet the path to get a list of Terminology.
 	TerminologyRoute = "/api/terminology"
 
@@ -143,7 +143,7 @@ func Mux(db *sql.DB, logger *slog.Logger, cfg *config.Config) http.Handler {
 	l := lg.Logger(logger)(mux)
 
 	corsMiddleware := cors.New(cors.Options{
-		AllowedOrigins: []string{fmt.Sprintf("http://localhost:%d", cfg.Server.Port)},
+		AllowedOrigins: []string{fmt.Sprintf("http://localhost:%s", cfg.Server.Port)},
 		AllowedMethods: []string{
 			http.MethodGet,
 			http.MethodPost,

@@ -31,24 +31,24 @@ func NewCharacterHandler(svc service.CharacterService) CharacterHandler {
 func (h *characterHandler) Insert(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateCharacterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, err)
 		return
 	}
 
 	id, err := h.svc.Insert(&req)
 	if err != nil {
 		if isValidationErr(err) {
-			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+			writeError(w, http.StatusUnprocessableEntity, err)
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 }
@@ -56,13 +56,13 @@ func (h *characterHandler) Insert(w http.ResponseWriter, r *http.Request) {
 func (h *characterHandler) Update(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid path value", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, err)
 		return
 	}
 
 	var req models.UpdateCharacterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, err)
 		return
 	}
 
@@ -78,12 +78,12 @@ func (h *characterHandler) Update(w http.ResponseWriter, r *http.Request) {
 		default:
 			status = http.StatusInternalServerError
 		}
-		http.Error(w, err.Error(), status)
+		writeError(w, status, err)
 		return
 	}
 
 	if err = json.NewEncoder(w).Encode(req); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 }
@@ -104,7 +104,7 @@ func (h *characterHandler) FindAll(w http.ResponseWriter, r *http.Request) {
 func (h *characterHandler) FindByID(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid path value", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, err)
 		return
 	}
 	c, err := h.svc.FindByID(id)
@@ -125,7 +125,7 @@ func (h *characterHandler) FindByID(w http.ResponseWriter, r *http.Request) {
 func (h *characterHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid path value", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, err)
 		return
 	}
 
@@ -139,7 +139,7 @@ func (h *characterHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		default:
 			status = http.StatusInternalServerError
 		}
-		http.Error(w, err.Error(), status)
+		writeError(w, status, err)
 		return
 	}
 
