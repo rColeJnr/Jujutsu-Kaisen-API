@@ -16,7 +16,7 @@ import (
 
 const (
 	// <-- CHARACTER -->
-	// CharacterID is the character'a identifier
+	// CharacterID is the character identifier
 	CharacterID = "id"
 
 	// CharacterRoute is When http.MethodPut the path to create a new character.
@@ -78,7 +78,7 @@ const (
 
 // Mux creates a multiplexer with al the endpoints for our services.
 func Mux(db *sql.DB, logger *slog.Logger, cfg *config.Config) http.Handler {
-	m := jwt.NewManager(cfg.JWT.Secret, cfg.JWT.ExpireHours)
+	jwtManager := jwt.NewManager(cfg.JWT.Secret, cfg.JWT.ExpireHours)
 
 	aRepo := repository.NewAuthRepository(db)
 	cRepo := repository.NewCharacterRepository(db)
@@ -87,7 +87,7 @@ func Mux(db *sql.DB, logger *slog.Logger, cfg *config.Config) http.Handler {
 	eRepo := repository.NewEpisodeRepository(db)
 	tRepo := repository.NewTerminologyRepository(db)
 
-	aSvc := service.NewAuthService(aRepo, m)
+	aSvc := service.NewAuthService(aRepo, jwtManager)
 	cSvc := service.NewCharacterService(cRepo)
 	ctSvc := service.NewCursedTechniqueService(cRepo, ctRepo)
 	dSvc := service.NewDomainExpansionService(cRepo, dRepo)
@@ -106,39 +106,39 @@ func Mux(db *sql.DB, logger *slog.Logger, cfg *config.Config) http.Handler {
 	// <-- Auth -->
 	mux.HandleFunc(http.MethodPost+" "+"/api/auth/register", aHandler.Register)
 	mux.HandleFunc(http.MethodPost+" "+"/api/auth/login", aHandler.Login)
-	mux.HandleFunc(http.MethodPatch+" "+"/api/auth/update", aHandler.Update)
+	mux.HandleFunc(http.MethodPatch+" "+"/api/auth/update", jwtManager.Middleware(aHandler.Update))
 
 	// <-- Character -->
 	mux.HandleFunc(http.MethodGet+" "+CharacterRoute, cHandler.FindAll)
 	mux.HandleFunc(http.MethodGet+" "+CharacterByID, cHandler.FindByID)
-	mux.HandleFunc(http.MethodPost+" "+CharacterRoute, m.Middleware(cHandler.Insert))
-	mux.HandleFunc(http.MethodPatch+" "+CharacterByID, m.Middleware(cHandler.Update))
-	mux.HandleFunc(http.MethodDelete+" "+CharacterByID, m.Middleware(cHandler.Delete))
+	mux.HandleFunc(http.MethodPost+" "+CharacterRoute, jwtManager.Middleware(cHandler.Insert))
+	mux.HandleFunc(http.MethodPatch+" "+CharacterByID, jwtManager.Middleware(cHandler.Update))
+	mux.HandleFunc(http.MethodDelete+" "+CharacterByID, jwtManager.Middleware(cHandler.Delete))
 
 	// <-- Cursed Technique -->
 	mux.HandleFunc(http.MethodGet+" "+CursedTechniqueRoute, ctHandler.FindAll)
 	mux.HandleFunc(http.MethodGet+" "+CursedTechniqueByID, ctHandler.FindByID)
-	mux.HandleFunc(http.MethodPost+" "+CursedTechniqueRoute, m.Middleware(ctHandler.Insert))
-	mux.HandleFunc(http.MethodPatch+" "+CursedTechniqueByID, m.Middleware(ctHandler.Update))
+	mux.HandleFunc(http.MethodPost+" "+CursedTechniqueRoute, jwtManager.Middleware(ctHandler.Insert))
+	mux.HandleFunc(http.MethodPatch+" "+CursedTechniqueByID, jwtManager.Middleware(ctHandler.Update))
 
 	// <-- Domain Expansion -->
 	mux.HandleFunc(http.MethodGet+" "+DomainExpansionRoute, dHandler.FindAll)
 	mux.HandleFunc(http.MethodGet+" "+DomainExpansionByID, dHandler.FindByID)
-	mux.HandleFunc(http.MethodPost+" "+DomainExpansionRoute, m.Middleware(dHandler.Insert))
-	mux.HandleFunc(http.MethodPatch+" "+DomainExpansionByID, m.Middleware(dHandler.Update))
+	mux.HandleFunc(http.MethodPost+" "+DomainExpansionRoute, jwtManager.Middleware(dHandler.Insert))
+	mux.HandleFunc(http.MethodPatch+" "+DomainExpansionByID, jwtManager.Middleware(dHandler.Update))
 
 	// <-- Episode -->
 	mux.HandleFunc(http.MethodGet+" "+EpisodeRoute, eHandler.FindAll)
 	mux.HandleFunc(http.MethodGet+" "+EpisodeByID, eHandler.FindByID)
-	mux.HandleFunc(http.MethodPost+" "+EpisodeRoute, m.Middleware(eHandler.Insert))
-	mux.HandleFunc(http.MethodPatch+" "+EpisodeByID, m.Middleware(eHandler.Update))
-	mux.HandleFunc(http.MethodDelete+" "+EpisodeByID, m.Middleware(eHandler.Delete))
+	mux.HandleFunc(http.MethodPost+" "+EpisodeRoute, jwtManager.Middleware(eHandler.Insert))
+	mux.HandleFunc(http.MethodPatch+" "+EpisodeByID, jwtManager.Middleware(eHandler.Update))
+	mux.HandleFunc(http.MethodDelete+" "+EpisodeByID, jwtManager.Middleware(eHandler.Delete))
 
 	// <-- Terminology -->
 	mux.HandleFunc(http.MethodGet+" "+TerminologyRoute, tHandler.FindAll)
 	mux.HandleFunc(http.MethodGet+" "+TerminologyByID, tHandler.FindByID)
-	mux.HandleFunc(http.MethodPost+" "+TerminologyRoute, m.Middleware(tHandler.Insert))
-	mux.HandleFunc(http.MethodPatch+" "+TerminologyByID, m.Middleware(tHandler.Update))
+	mux.HandleFunc(http.MethodPost+" "+TerminologyRoute, jwtManager.Middleware(tHandler.Insert))
+	mux.HandleFunc(http.MethodPatch+" "+TerminologyByID, jwtManager.Middleware(tHandler.Update))
 
 	l := lg.Logger(logger)(mux)
 

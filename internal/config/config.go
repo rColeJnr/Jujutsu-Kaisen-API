@@ -67,5 +67,6 @@ func Load() (*Config, error) {
 			WriteTimeoutSec: writeTimeout,
 		},
 		Database: DatabaseConfig{DSN: dbDSN},
+		JWT:      JWTConfig{Secret: secret, ExpireHours: jwtExpire},
 	}, nil
 }

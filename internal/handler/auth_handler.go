@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/rcolejnr/jjk-api/internal/jwt"
 	"github.com/rcolejnr/jjk-api/internal/models"
 	"github.com/rcolejnr/jjk-api/internal/service"
 )
@@ -57,7 +58,8 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	writeJson(w, http.StatusOK, resp)
 }
 
-// Update updates the admin password.
+// Update internal route  to update the admin password
+// TODO: Invalidate current access_token after update.
 func (h *AuthHandler) Update(w http.ResponseWriter, r *http.Request) {
 	var req models.UpdateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -65,7 +67,9 @@ func (h *AuthHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.authSvc.Update(&req)
+	claims := jwt.ClaimsFromContext(r.Context())
+
+	err := h.authSvc.Update(claims.Email, &req)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, err)
 		return

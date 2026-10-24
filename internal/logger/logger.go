@@ -58,7 +58,6 @@ func Logger(logger *slog.Logger) func(http.Handler) http.Handler {
 				"remote_address", r.RemoteAddr,
 				"error_msg", wrapped.rBody.String(),
 			)
-
 		})
 	}
 }

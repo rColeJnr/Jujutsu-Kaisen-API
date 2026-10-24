@@ -18,7 +18,6 @@ type LoginRequest struct {
 }
 
 type UpdateRequest struct {
-	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
@@ -29,6 +28,7 @@ type AuthResponse struct {
 }
 
 type Claims struct {
-	ID    int64  `json:"id"`
-	Email string `json:"email"`
+	ID       int64  `json:"id"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }

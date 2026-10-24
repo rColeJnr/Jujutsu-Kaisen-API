@@ -13,7 +13,7 @@ import (
 type AuthService interface {
 	Register(req *models.RegisterRequest) (*models.AuthResponse, error)
 	Login(req *models.LoginRequest) (*models.AuthResponse, error)
-	Update(req *models.UpdateRequest) error
+	Update(email string, req *models.UpdateRequest) error
 }
 
 type authService struct {
@@ -56,7 +56,7 @@ func (s *authService) Register(req *models.RegisterRequest) (*models.AuthRespons
 		return nil, fmt.Errorf("authService.register: failed to create admin: %w", err)
 	}
 
-	token, err := s.m.Generate(admin.ID, admin.Email)
+	token, err := s.m.Generate(admin.ID, admin.Email, string(hash))
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (s *authService) Login(req *models.LoginRequest) (*models.AuthResponse, err
 		return nil, fmt.Errorf("auth: invalid email or password")
 	}
 
-	token, err := s.m.Generate(admin.ID, admin.Email)
+	token, err := s.m.Generate(admin.ID, admin.Email, req.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -97,21 +97,14 @@ func (s *authService) Login(req *models.LoginRequest) (*models.AuthResponse, err
 	}, nil
 }
 
-func (s *authService) Update(req *models.UpdateRequest) error {
-	req.Email = trimmAndLowerCase(req.Email)
-
-	admin, err := s.r.FindByEmail(req.Email)
+func (s *authService) Update(email string, req *models.UpdateRequest) error {
+	admin, err := s.r.FindByEmail(email)
 	if err != nil {
 		return fmt.Errorf("login: database error: %w", err)
 	}
 
-	// IMPORTANT: Return the same generic error for both "user not found" and
-	// "wrong password" to prevent user enumeration attacks.
 	if admin == nil {
-		return fmt.Errorf("auth: invalid email or password")
-	}
-	if err := bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(req.Password)); err != nil {
-		return fmt.Errorf("auth: invalid email or password")
+		return fmt.Errorf("auth: unknown error")
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), 12)
@@ -119,7 +112,7 @@ func (s *authService) Update(req *models.UpdateRequest) error {
 		return fmt.Errorf("auth: failed to hash password: %w", err)
 	}
 
-	s.r.Update(req.Email, string(hash))
+	s.r.Update(email, string(hash))
 
 	return nil
 }
