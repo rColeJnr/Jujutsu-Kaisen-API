@@ -12,7 +12,7 @@ import (
 type TerminologyRepository interface {
 	Insert(*models.CreateTerminologyRequest) (int64, error)
 	Update(int64, *models.UpdateTerminologyRequest) error
-	FindAll() ([]*models.Terminology, error)
+	FindAll(*models.TerminologyFilter) ([]*models.Terminology, error)
 	FindByID(int64) (*models.Terminology, error)
 }
 
@@ -88,11 +88,16 @@ func (r *sqlTerminologyRepository) Update(id int64, req *models.UpdateTerminolog
 	return nil
 }
 
-func (r *sqlTerminologyRepository) FindAll() ([]*models.Terminology, error) {
+func (r *sqlTerminologyRepository) FindAll(f *models.TerminologyFilter) ([]*models.Terminology, error) {
 	r.RLock()
 	defer r.RUnlock()
 
 	query := "SELECT id, term, meaning FROM terminology"
+
+	if f.Term != "" {
+		query += ` WHERE term LIKE ? ESCAPE '\'`
+	}
+
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, fmt.Errorf("terminology_repository.FindAll: %w", err)
@@ -100,7 +105,7 @@ func (r *sqlTerminologyRepository) FindAll() ([]*models.Terminology, error) {
 
 	defer stmt.Close()
 
-	rows, err := r.db.Query(query)
+	rows, err := r.db.Query(query, "%"+escapeLike(f.Term)+"%")
 	if err != nil {
 		return nil, fmt.Errorf("terminology_repository.FindAll: %w", err)
 	}

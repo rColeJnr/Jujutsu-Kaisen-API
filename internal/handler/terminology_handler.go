@@ -86,7 +86,10 @@ func (h *terminologyHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *terminologyHandler) FindAll(w http.ResponseWriter, r *http.Request) {
-	c, err := h.svc.FindAll()
+	query := r.URL.Query()
+	f := &models.TerminologyFilter{Term: strings.TrimSpace(query.Get("term"))}
+
+	c, err := h.svc.FindAll(f)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return

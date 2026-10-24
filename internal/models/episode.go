@@ -28,3 +28,8 @@ type UpdateEpisodeRequest struct {
 	Image   *string `json:"image"`
 	AirDate *string `json:"air_date"`
 }
+
+type EpisodeFilter struct {
+	Season int
+	Title  string
+}

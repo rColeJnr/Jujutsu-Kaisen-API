@@ -13,7 +13,7 @@ import (
 type EpisodeRepository interface {
 	Insert(*models.CreateEpisodeRequest) (int64, error)
 	Update(int64, *models.UpdateEpisodeRequest) error
-	FindAll() ([]*models.Episode, error)
+	FindAll(*models.EpisodeFilter) ([]*models.Episode, error)
 	FindByID(int64) (*models.Episode, error)
 	Delete(int64) error
 }
@@ -121,7 +121,7 @@ func (r *sqlEpisodeRepository) Update(id int64, req *models.UpdateEpisodeRequest
 	return err
 }
 
-func (r *sqlEpisodeRepository) FindAll() ([]*models.Episode, error) {
+func (r *sqlEpisodeRepository) FindAll(f *models.EpisodeFilter) ([]*models.Episode, error) {
 	r.RLock()
 	defer r.RUnlock()
 
@@ -130,7 +130,19 @@ func (r *sqlEpisodeRepository) FindAll() ([]*models.Episode, error) {
 		FROM episode e
 	`
 
-	rows, err := r.db.Query(query)
+	var args []any
+
+	if f.Season != 0 {
+		query += ` WHERE season = ?`
+		args = append(args, f.Season)
+	}
+
+	if f.Title != "" {
+		query += ` WHERE title LIKE ? ESCAPE '\'`
+		args = append(args, "%"+escapeLike(f.Title)+"%")
+	}
+
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("episode_repo.FindAll: %w", err)
 	}

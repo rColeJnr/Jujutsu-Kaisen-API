@@ -62,6 +62,11 @@ func NewSQLite3DB(dbfile string) (*SQLiteDB, error) {
 		return nil, fmt.Errorf("Error on createTableAdmin: %w", err)
 	}
 
+	// INDEXES
+	if err := createIndexes(db); err != nil {
+		return nil, fmt.Errorf("Error on createIndexes: %w", err)
+	}
+
 	return &SQLiteDB{
 		DB: db,
 	}, nil
@@ -71,6 +76,7 @@ func (s *SQLiteDB) Close() error {
 	return s.DB.Close()
 }
 
+// <-- TABLES -->
 func createTableCharacter(db *sql.DB) (sql.Result, error) {
 	sql := `CREATE TABLE IF NOT EXISTS character (
 		id INTEGER PRIMARY KEY,
@@ -98,8 +104,8 @@ func createTableCharacter(db *sql.DB) (sql.Result, error) {
 func createTableDomainExpansion(db *sql.DB) (sql.Result, error) {
 	sql := `CREATE TABLE IF NOT EXISTS domain_expansion (
 		"id" INTEGER,
-		"character_id" INTEGER NOT NULL,
-		"name" TEXT NOT NULL,
+		"character_id" INTEGER NOT NULL UNIQUE,
+		"name" TEXT NOT NULL UNIQUE,
 		"description" TEXT,
 		PRIMARY KEY("id"),
 		FOREIGN KEY("character_id") REFERENCES character("id") ON DELETE RESTRICT
@@ -111,8 +117,8 @@ func createTableDomainExpansion(db *sql.DB) (sql.Result, error) {
 func createTableCursedTechnique(db *sql.DB) (sql.Result, error) {
 	sql := `CREATE TABLE IF NOT EXISTS cursed_technique (
 		id INTEGER,
-		character_id INTEGER NOT NULL,
-		name TEXT NOT NULL,
+		character_id INTEGER NOT NULL UNIQUE,
+		name TEXT NOT NULL UNIQUE,
 		description TEXT NOT NULL,
 		type TEXT,
 		PRIMARY KEY(id),
@@ -127,7 +133,7 @@ func createTableAdmin(db *sql.DB) (sql.Result, error) {
 		id INTEGER,
 		email TEXT NOT NULL UNIQUE,
 		password TEXT NOT NULL,
-		created_at TIMESTAMP,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		PRIMARY KEY(id)
 	);`
 
@@ -150,7 +156,7 @@ func createTableEpisode(db *sql.DB) (sql.Result, error) {
 func createTableEpisodeCharacter(db *sql.DB) (sql.Result, error) {
 	sql := `CREATE TABLE IF NOT EXISTS episode_character (
 		id INTEGER,
-		url TEXT NOT NULL,
+		url TEXT NOT NULL UNIQUE,
 		episode_id INTEGER,
 		PRIMARY KEY(id),
 		FOREIGN KEY(episode_id) REFERENCES episode(id) ON DELETE CASCADE
@@ -162,10 +168,44 @@ func createTableEpisodeCharacter(db *sql.DB) (sql.Result, error) {
 func createTableTerminology(db *sql.DB) (sql.Result, error) {
 	sql := `CREATE TABLE IF NOT EXISTS terminology (
 		id INTEGER,
-		term TEXT NOT NULL,
+		term TEXT NOT NULL UNIQUE,
 		meaning TEXT NOT NULL,
 		PRIMARY KEY(id)
 	)`
 
 	return db.Exec(sql)
+}
+
+// <-- INDEXES -->
+func createIndexes(db *sql.DB) error {
+	queries := []string{
+
+		`CREATE INDEX IF NOT EXISTS idx_episode_season
+		ON episode (season)`, // Loading the list of episodes in a season.
+		`CREATE INDEX IF NOT EXISTS idx_ep_characters
+		ON episode_character (episode_id)`, // Loading the list of characters in an episode.
+
+		`CREATE INDEX IF NOT EXISTS idx_character_species
+		ON character (species)`, // Loading the list of characters where species = ?.
+		`CREATE INDEX IF NOT EXISTS idx_character_status 
+		ON character (status)`, // Loading the list of characters where status = ?.
+		`CREATE INDEX IF NOT EXISTS idx_character_grade
+		ON character (grade)`, // Loading the list of characters where grade = ?.
+		`CREATE INDEX IF NOT EXISTS idx_character_first_ep
+		ON character (first_appearance_ep)`, // Enables fast checks on character table on delete.
+
+		`CREATE INDEX IF NOT EXISTS idx_character_domain
+		ON domain_expansion (character_id)`, // Loading a character domain.
+
+		`CREATE INDEX IF NOT EXISTS idx_character_ctech
+		ON cursed_technique (character_id)`, // Loading a character cursed technique.
+	}
+
+	for _, query := range queries {
+		if _, err := db.Exec(query); err != nil {
+			return fmt.Errorf("Failed to create index: %w", err)
+		}
+	}
+
+	return nil
 }

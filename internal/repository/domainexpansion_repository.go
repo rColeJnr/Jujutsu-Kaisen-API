@@ -13,7 +13,7 @@ import (
 type DomainExpansionRepository interface {
 	Insert(*models.CreateDomainExpansionRequest) (int64, error)
 	Update(int64, *models.UpdateDomainExpansionRequest) error
-	FindAll() ([]*models.DomainExpansion, error)
+	FindAll(*models.DomainExpansionFilter) ([]*models.DomainExpansion, error)
 	FindByID(int64) (*models.DomainExpansion, error)
 	Delete(int64) error
 }
@@ -94,7 +94,7 @@ func (r *sqlDomainExpansionRepository) Update(id int64, req *models.UpdateDomain
 	return err
 }
 
-func (r *sqlDomainExpansionRepository) FindAll() ([]*models.DomainExpansion, error) {
+func (r *sqlDomainExpansionRepository) FindAll(f *models.DomainExpansionFilter) ([]*models.DomainExpansion, error) {
 	r.RLock()
 	defer r.RUnlock()
 
@@ -103,7 +103,11 @@ func (r *sqlDomainExpansionRepository) FindAll() ([]*models.DomainExpansion, err
 		FROM domain_expansion
 	`
 
-	rows, err := r.db.Query(query)
+	if f.Name != "" {
+		query += ` WHERE name LIKE ? ESCAPE '\'`
+	}
+
+	rows, err := r.db.Query(query, "%"+escapeLike(f.Name)+"%")
 	if err != nil {
 		return nil, fmt.Errorf("domainexpansion_repository.FindAll: %w", err)
 	}

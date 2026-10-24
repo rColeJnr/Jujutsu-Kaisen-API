@@ -20,7 +20,7 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{}))
 	slog.SetDefault(logger)
 
-	err := godotenv.Load()
+	err := godotenv.Load("./cmd/jjk_api/.env")
 	if err != nil {
 		logger.Error("failed to load env variables.", "error", err)
 		os.Exit(1)
