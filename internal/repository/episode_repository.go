@@ -13,7 +13,7 @@ import (
 type EpisodeRepository interface {
 	Insert(*models.CreateEpisodeRequest) (int64, error)
 	Update(int64, *models.UpdateEpisodeRequest) error
-	FindAll(*models.EpisodeFilter) ([]*models.Episode, error)
+	FindAll(*models.EpisodeFilter) ([]*models.Episode, int, error)
 	FindByID(int64) (*models.Episode, error)
 	Delete(int64) error
 }
@@ -121,14 +121,9 @@ func (r *sqlEpisodeRepository) Update(id int64, req *models.UpdateEpisodeRequest
 	return err
 }
 
-func (r *sqlEpisodeRepository) FindAll(f *models.EpisodeFilter) ([]*models.Episode, error) {
+func (r *sqlEpisodeRepository) FindAll(f *models.EpisodeFilter) ([]*models.Episode, int, error) {
 	r.RLock()
 	defer r.RUnlock()
-
-	query := `
-		SELECT e.id, e.season, e.title, e.image, e.air_date
-		FROM episode e
-	`
 
 	var (
 		where []string
@@ -143,13 +138,28 @@ func (r *sqlEpisodeRepository) FindAll(f *models.EpisodeFilter) ([]*models.Episo
 		args = append(args, "%"+escapeLike(f.Title)+"%")
 	}
 
+	whereSQL := ""
 	if len(where) > 0 {
-		query += " WHERE " + strings.Join(where, " AND ")
+		whereSQL += " WHERE " + strings.Join(where, " AND ")
 	}
+
+	var total int
+	if err := r.db.QueryRow("SELECT COUNT(*) FROM episode e"+whereSQL, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("episode_repo.FindAll: %w", err)
+	}
+
+	if total == 0 {
+		return nil, 0, nil
+	}
+
+	query := `
+		SELECT e.id, e.season, e.title, e.image, e.air_date
+		FROM episode e
+	`
 
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("episode_repo.FindAll: %w", err)
+		return nil, 0, fmt.Errorf("episode_repo.FindAll: %w", err)
 	}
 
 	defer rows.Close()
@@ -159,25 +169,25 @@ func (r *sqlEpisodeRepository) FindAll(f *models.EpisodeFilter) ([]*models.Episo
 		var ep models.Episode
 
 		if err := rows.Scan(&ep.ID, &ep.Season, &ep.Title, &ep.Image, &ep.AirDate); err != nil {
-			return nil, fmt.Errorf("episode_repo.FindAll: %w", err)
+			return nil, 0, fmt.Errorf("episode_repo.FindAll: %w", err)
 		}
 
 		ep.Characters = []string{}
 		episodes = append(episodes, &ep)
 	}
 	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("episode_repo.FindAll: %w", err)
+		return nil, 0, fmt.Errorf("episode_repo.FindAll: %w", err)
 	}
 
 	if len(episodes) == 0 {
-		return episodes, nil
+		return episodes, 0, nil
 	}
 
 	// Query episode characters
 	for _, ep := range episodes {
 		ecRows, err := r.db.Query("SELECT url FROM episode_character WHERE episode_id = ?", ep.ID)
 		if err != nil {
-			return nil, fmt.Errorf("episode_repo.FindAll: %w", err)
+			return nil, 0, fmt.Errorf("episode_repo.FindAll: %w", err)
 		}
 
 		ecErr := func() error {
@@ -193,11 +203,11 @@ func (r *sqlEpisodeRepository) FindAll(f *models.EpisodeFilter) ([]*models.Episo
 		}()
 
 		if ecErr != nil {
-			return nil, fmt.Errorf("character_repo.FindAll: %w", ecErr)
+			return nil, 0, fmt.Errorf("character_repo.FindAll: %w", ecErr)
 		}
 	}
 
-	return episodes, nil
+	return episodes, total, nil
 }
 
 func (r *sqlEpisodeRepository) FindByID(id int64) (*models.Episode, error) {

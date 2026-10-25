@@ -12,7 +12,7 @@ import (
 type CharacterService interface {
 	Insert(*models.CreateCharacterRequest) (int64, error)
 	Update(int64, *models.UpdateCharacterRequest) error
-	FindAll(*models.CharacterFilter) ([]*models.Character, error)
+	FindAll(*models.CharacterFilter) ([]*models.Character, int, error)
 	FindByID(int64) (*models.Character, error)
 	Delete(int64) error
 }
@@ -42,13 +42,9 @@ func (s *characterService) Update(id int64, req *models.UpdateCharacterRequest) 
 	return s.characterRepo.Update(id, req)
 }
 
-func (s *characterService) FindAll(f *models.CharacterFilter) ([]*models.Character, error) {
-	characters, err := s.characterRepo.FindAll(f)
-	if err != nil {
-		return nil, err
-	}
-
-	return characters, nil
+func (s *characterService) FindAll(f *models.CharacterFilter) ([]*models.Character, int, error) {
+	f.Normalize()
+	return s.characterRepo.FindAll(f)
 }
 
 func (s *characterService) FindByID(id int64) (*models.Character, error) {

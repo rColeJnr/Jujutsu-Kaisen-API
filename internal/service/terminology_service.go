@@ -58,12 +58,7 @@ func (s *terminologyService) Update(id int64, req *models.UpdateTerminologyReque
 }
 
 func (s *terminologyService) FindAll(f *models.TerminologyFilter) ([]*models.Terminology, error) {
-	terminologies, err := s.repo.FindAll(f)
-	if err != nil {
-		return nil, err
-	}
-
-	return terminologies, nil
+	return s.repo.FindAll(f)
 }
 
 func (s *terminologyService) FindByID(id int64) (*models.Terminology, error) {

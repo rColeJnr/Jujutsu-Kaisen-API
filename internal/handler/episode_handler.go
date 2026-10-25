@@ -87,20 +87,27 @@ func (h *episodeHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *episodeHandler) FindAll(w http.ResponseWriter, r *http.Request) {
+	page, err := parsePagination(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
 	query := r.URL.Query()
 	season, _ := strconv.Atoi(query.Get("season"))
 	f := &models.EpisodeFilter{
-		Season: season,
-		Title:  strings.TrimSpace(query.Get("title")),
+		Season:     season,
+		Title:      strings.TrimSpace(query.Get("title")),
+		Pagination: page,
 	}
 
-	c, err := h.svc.FindAll(f)
+	e, total, err := h.svc.FindAll(f)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	if err = writeJson(w, http.StatusOK, c); err != nil {
+	if err = writeJson(w, http.StatusOK, models.NewPaginated(e, page, total)); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
