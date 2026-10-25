@@ -5,7 +5,15 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
+
+	"github.com/rcolejnr/jjk-api/internal/middleware"
+)
+
+const (
+	maxBodyBytes = 1 << 20 // requests larger than 1 MiB are rejected
+	maxLoggedLen = 512     // only the first 512 bytes of a body are logged
 )
 
 type responseWriter struct {
@@ -38,18 +46,26 @@ func Logger(logger *slog.Logger) func(http.Handler) http.Handler {
 			}
 
 			var bodyStr string
-			if r.Body != nil {
-				bodyBytes, err := io.ReadAll(r.Body)
-				if err == nil {
-					bodyStr = string(bodyBytes)
-					r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+			if r.Body != nil && !strings.HasPrefix(r.URL.Path, "/api/auth/") {
+				bodyBytes, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxBodyBytes))
+				if err != nil {
+					http.Error(wrapped, "request body too large", http.StatusRequestEntityTooLarge)
+					return
 				}
+				r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+				bodyStr = string(bodyBytes)
+				if len(bodyStr) > maxLoggedLen {
+					bodyStr = bodyStr[:maxLoggedLen] + "...(truncated)"
+				}
+			} else if r.Body != nil {
+				r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
 			}
 
 			next.ServeHTTP(wrapped, r)
 
 			logger.Info(
 				http.StatusText(wrapped.statusCode),
+				"X-Request-ID", middleware.FromContext(r.Context()),
 				"method", r.Method,
 				"path", r.URL.Path,
 				"body", bodyStr,
