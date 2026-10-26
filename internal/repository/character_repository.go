@@ -276,7 +276,7 @@ func (r *sqlCharacterRepository) FindAll(f *models.CharacterFilter) ([]*models.C
 			}
 		}
 
-		c.CursedTechniques = []*models.CursedTechnique{}
+		c.CursedTechniques = []models.CursedTechnique{}
 
 		characters = append(characters, &c)
 	}
@@ -303,7 +303,7 @@ func (r *sqlCharacterRepository) FindAll(f *models.CharacterFilter) ([]*models.C
 				if err := ctRows.Scan(&ct.ID, &ct.CharacterID, &ct.Name, &ct.Description, &ct.Type); err != nil {
 					return err
 				}
-				char.CursedTechniques = append(char.CursedTechniques, &ct)
+				char.CursedTechniques = append(char.CursedTechniques, ct)
 			}
 
 			return ctRows.Err()
@@ -392,7 +392,7 @@ func (r *sqlCharacterRepository) FindByID(id int64) (*models.Character, error) {
 		}
 
 		if tID.Valid {
-			c.CursedTechniques = append(c.CursedTechniques, &models.CursedTechnique{
+			c.CursedTechniques = append(c.CursedTechniques, models.CursedTechnique{
 				ID:          tID.Int64,
 				CharacterID: c.ID,
 				Name:        tName.String,

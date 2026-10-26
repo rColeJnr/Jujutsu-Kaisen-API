@@ -14,7 +14,7 @@ type SQLiteDB struct {
 // NewSQLite3Repo initializes the repository, creating and configuring the database and all the necessary tables
 // Database forces foreign_key.
 func NewSQLite3DB(dbfile string) (*SQLiteDB, error) {
-	db, err := sql.Open("sqlite3", fmt.Sprintf("%s?_foreign_keys=1", dbfile))
+	db, err := sql.Open("sqlite3", fmt.Sprintf("%s?_foreign_keys=1?_journal_mode=WAL", dbfile))
 	if err != nil {
 		return nil, err
 	}

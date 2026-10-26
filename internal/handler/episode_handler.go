@@ -119,7 +119,7 @@ func (h *episodeHandler) FindByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid path value", http.StatusBadRequest)
 		return
 	}
-	c, err := h.svc.FindByID(id)
+	e, err := h.svc.FindByID(id)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "not_found:") {
 			writeError(w, http.StatusNotFound, err)
@@ -128,7 +128,7 @@ func (h *episodeHandler) FindByID(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	if err = writeJson(w, http.StatusOK, c); err != nil {
+	if err = writeJson(w, http.StatusOK, e); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}

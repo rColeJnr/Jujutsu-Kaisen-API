@@ -12,7 +12,7 @@ import (
 type CursedTechniqueService interface {
 	Insert(*models.CreateCursedTechniqueRequest) (int64, error)
 	Update(int64, *models.UpdateCursedTechniqueRequest) error
-	FindAll(*models.CursedTechniqueFilter) ([]*models.CursedTechnique, error)
+	FindAll(*models.CursedTechniqueFilter) ([]*models.CursedTechnique, int, error)
 	FindByID(int64) (*models.CursedTechnique, error)
 }
 
@@ -67,7 +67,7 @@ func (s *ctechniqueService) Update(id int64, req *models.UpdateCursedTechniqueRe
 	return s.repo.Update(id, req)
 }
 
-func (s *ctechniqueService) FindAll(f *models.CursedTechniqueFilter) ([]*models.CursedTechnique, error) {
+func (s *ctechniqueService) FindAll(f *models.CursedTechniqueFilter) ([]*models.CursedTechnique, int, error) {
 	return s.repo.FindAll(f)
 }
 

@@ -21,4 +21,5 @@ type UpdateDomainExpansionRequest struct {
 
 type DomainExpansionFilter struct {
 	Name string
+	Pagination
 }

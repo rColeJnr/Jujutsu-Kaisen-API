@@ -12,7 +12,7 @@ import (
 type TerminologyRepository interface {
 	Insert(*models.CreateTerminologyRequest) (int64, error)
 	Update(int64, *models.UpdateTerminologyRequest) error
-	FindAll(*models.TerminologyFilter) ([]*models.Terminology, error)
+	FindAll(*models.TerminologyFilter) ([]*models.Terminology, int, error)
 	FindByID(int64) (*models.Terminology, error)
 }
 
@@ -88,38 +88,54 @@ func (r *sqlTerminologyRepository) Update(id int64, req *models.UpdateTerminolog
 	return nil
 }
 
-func (r *sqlTerminologyRepository) FindAll(f *models.TerminologyFilter) ([]*models.Terminology, error) {
+func (r *sqlTerminologyRepository) FindAll(f *models.TerminologyFilter) ([]*models.Terminology, int, error) {
 	r.RLock()
 	defer r.RUnlock()
 
-	query := "SELECT id, term, meaning FROM terminology"
-
 	var args []any
+	var where []string
 	if f.Term != "" {
-		query += ` WHERE term LIKE ? ESCAPE '\'`
+		where = append(where, ` WHERE term LIKE ? ESCAPE '\'`)
 		args = append(args, "%"+escapeLike(f.Term)+"%")
 	}
 
+	whereSQL := ""
+	if len(where) > 0 {
+		whereSQL += " WHERE " + strings.Join(where, " AND ")
+	}
+
+	var total int
+	if err := r.db.QueryRow("SELECT COUNT(*) FROM terminology"+whereSQL, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("terminology_repository.FindAll: %w", err)
+	}
+
+	if total == 0 {
+		return []*models.Terminology{}, 0, nil
+	}
+
+	query := "SELECT id, term, meaning FROM terminology" + whereSQL + "ORDER BY id LIMIT ? OFFSET ?"
+	args = append(args, f.Limit, f.Offset())
+
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("terminology_repository.FindAll: %w", err)
+		return nil, 0, fmt.Errorf("terminology_repository.FindAll: %w", err)
 	}
 
 	var terms []*models.Terminology
 	for rows.Next() {
 		var t models.Terminology
 		if err = rows.Scan(&t.ID, &t.Term, &t.Meaning); err != nil {
-			return nil, fmt.Errorf("terminology_repository.FindAll: %w", err)
+			return nil, 0, fmt.Errorf("terminology_repository.FindAll: %w", err)
 		}
 
 		terms = append(terms, &t)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("terminology_repository.FindAll: %w", err)
+		return nil, 0, fmt.Errorf("terminology_repository.FindAll: %w", err)
 	}
 
-	return terms, nil
+	return terms, total, nil
 }
 func (r *sqlTerminologyRepository) FindByID(id int64) (*models.Terminology, error) {
 	r.RLock()

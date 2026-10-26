@@ -13,7 +13,7 @@ import (
 type CursedTechniqueRepository interface {
 	Insert(*models.CreateCursedTechniqueRequest) (int64, error)
 	Update(int64, *models.UpdateCursedTechniqueRequest) error
-	FindAll(*models.CursedTechniqueFilter) ([]*models.CursedTechnique, error)
+	FindAll(*models.CursedTechniqueFilter) ([]*models.CursedTechnique, int, error)
 	FindByID(int64) (*models.CursedTechnique, error)
 	Delete(int64) error
 }
@@ -94,24 +94,43 @@ func (r *sqlCursedTechniqueRepository) Update(id int64, req *models.UpdateCursed
 	return err
 }
 
-func (r *sqlCursedTechniqueRepository) FindAll(f *models.CursedTechniqueFilter) ([]*models.CursedTechnique, error) {
+func (r *sqlCursedTechniqueRepository) FindAll(f *models.CursedTechniqueFilter) ([]*models.CursedTechnique, int, error) {
 	r.RLock()
 	defer r.RUnlock()
+
+	var (
+		where []string
+		args  []any
+	)
+
+	if f.Name != "" {
+		where = append(where, ` WHERE name LIKE ? ESCAPE '\'`)
+		args = append(args, "%"+escapeLike(f.Name)+"%")
+	}
+
+	whereSQL := ""
+	if len(where) > 0 {
+		whereSQL += " WHERE " + strings.Join(where, " AND ")
+	}
+
+	var total int
+	if err := r.db.QueryRow("SELECT COUNT(*) FROM character c"+whereSQL, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("cursedtechnique_repository.FindAll: %w", err)
+	}
+
+	if total == 0 {
+		return []*models.CursedTechnique{}, 0, nil
+	}
 
 	query := `
 		SELECT id, character_id, name, description, type
 		FROM cursed_technique
-	`
-
-	var args []any
-	if f.Name != "" {
-		query += ` WHERE name LIKE ? ESCAPE '\'`
-		args = append(args, "%"+escapeLike(f.Name)+"%")
-	}
+	` + whereSQL + `ORDER BY id LIMIT ? OFFSET ?`
+	args = append(args, f.Limit, f.Offset())
 
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("cursedtechnique_repository.FindAll: %w", err)
+		return nil, 0, fmt.Errorf("cursedtechnique_repository.FindAll: %w", err)
 	}
 	defer rows.Close()
 
@@ -125,16 +144,16 @@ func (r *sqlCursedTechniqueRepository) FindAll(f *models.CursedTechniqueFilter) 
 			&ct.Description,
 			&ct.Type,
 		); err != nil {
-			return nil, fmt.Errorf("cursedtechnique_repository.FindAll: %w", err)
+			return nil, 0, fmt.Errorf("cursedtechnique_repository.FindAll: %w", err)
 		}
 		cursedTechniques = append(cursedTechniques, &ct)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("cursedtechnique_repository.FindAll: %w", err)
+		return nil, 0, fmt.Errorf("cursedtechnique_repository.FindAll: %w", err)
 	}
 
-	return cursedTechniques, nil
+	return cursedTechniques, total, nil
 }
 
 func (r *sqlCursedTechniqueRepository) FindByID(id int64) (*models.CursedTechnique, error) {

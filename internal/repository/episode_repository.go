@@ -250,14 +250,14 @@ func (r *sqlEpisodeRepository) FindByID(id int64) (*models.Episode, error) {
 }
 
 func (r *sqlEpisodeRepository) Delete(id int64) error {
-	r.Lock()
-	defer r.Unlock()
+	r.RLock()
+	defer r.RUnlock()
 
 	query := "DELETE FROM episode WHERE id = ?"
 	result, err := r.db.Exec(query, id)
 
 	if err != nil {
-		return fmt.Errorf("not_found: no episode with id: %d", id)
+		return fmt.Errorf("episode_repo.Delete: %w", err)
 	}
 
 	if rows, _ := result.RowsAffected(); rows == 0. {

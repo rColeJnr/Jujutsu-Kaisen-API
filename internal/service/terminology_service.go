@@ -12,7 +12,7 @@ import (
 type TerminologyService interface {
 	Insert(*models.CreateTerminologyRequest) (int64, error)
 	Update(int64, *models.UpdateTerminologyRequest) error
-	FindAll(*models.TerminologyFilter) ([]*models.Terminology, error)
+	FindAll(*models.TerminologyFilter) ([]*models.Terminology, int, error)
 	FindByID(int64) (*models.Terminology, error)
 }
 
@@ -57,7 +57,7 @@ func (s *terminologyService) Update(id int64, req *models.UpdateTerminologyReque
 	return s.repo.Update(id, req)
 }
 
-func (s *terminologyService) FindAll(f *models.TerminologyFilter) ([]*models.Terminology, error) {
+func (s *terminologyService) FindAll(f *models.TerminologyFilter) ([]*models.Terminology, int, error) {
 	return s.repo.FindAll(f)
 }
 

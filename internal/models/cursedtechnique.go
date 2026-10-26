@@ -23,4 +23,5 @@ type UpdateCursedTechniqueRequest struct {
 
 type CursedTechniqueFilter struct {
 	Name string
+	Pagination
 }

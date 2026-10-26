@@ -86,16 +86,22 @@ func (h *domainExpansioneHandler) Update(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *domainExpansioneHandler) FindAll(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
-	f := &models.DomainExpansionFilter{Name: strings.TrimSpace(query.Get("name"))}
+	page, err := parsePagination(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
 
-	c, err := h.svc.FindAll(f)
+	query := r.URL.Query()
+	f := &models.DomainExpansionFilter{Name: strings.TrimSpace(query.Get("name")), Pagination: page}
+
+	d, total, err := h.svc.FindAll(f)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	if err = writeJson(w, http.StatusOK, c); err != nil {
+	if err = writeJson(w, http.StatusOK, models.NewPaginated(d, page, total)); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -107,7 +113,7 @@ func (h *domainExpansioneHandler) FindByID(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "Invalid path value", http.StatusBadRequest)
 		return
 	}
-	c, err := h.svc.FindByID(id)
+	d, err := h.svc.FindByID(id)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "not_found:") {
 			writeError(w, http.StatusNotFound, err)
@@ -116,7 +122,7 @@ func (h *domainExpansioneHandler) FindByID(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	if err = writeJson(w, http.StatusOK, c); err != nil {
+	if err = writeJson(w, http.StatusOK, d); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}

@@ -17,4 +17,5 @@ type UpdateTerminologyRequest struct {
 
 type TerminologyFilter struct {
 	Term string
+	Pagination
 }

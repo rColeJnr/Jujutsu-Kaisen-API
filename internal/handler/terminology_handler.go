@@ -86,16 +86,22 @@ func (h *terminologyHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *terminologyHandler) FindAll(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
-	f := &models.TerminologyFilter{Term: strings.TrimSpace(query.Get("term"))}
+	page, err := parsePagination(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
 
-	c, err := h.svc.FindAll(f)
+	query := r.URL.Query()
+	f := &models.TerminologyFilter{Term: strings.TrimSpace(query.Get("term")), Pagination: page}
+
+	t, total, err := h.svc.FindAll(f)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	if err = writeJson(w, http.StatusOK, c); err != nil {
+	if err = writeJson(w, http.StatusOK, models.NewPaginated(t, page, total)); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -107,7 +113,7 @@ func (h *terminologyHandler) FindByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid path value", http.StatusBadRequest)
 		return
 	}
-	c, err := h.svc.FindByID(id)
+	t, err := h.svc.FindByID(id)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "not_found:") {
 			writeError(w, http.StatusNotFound, err)
@@ -116,7 +122,7 @@ func (h *terminologyHandler) FindByID(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	if err = writeJson(w, http.StatusOK, c); err != nil {
+	if err = writeJson(w, http.StatusOK, t); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}

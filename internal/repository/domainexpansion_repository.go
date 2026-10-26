@@ -13,7 +13,7 @@ import (
 type DomainExpansionRepository interface {
 	Insert(*models.CreateDomainExpansionRequest) (int64, error)
 	Update(int64, *models.UpdateDomainExpansionRequest) error
-	FindAll(*models.DomainExpansionFilter) ([]*models.DomainExpansion, error)
+	FindAll(*models.DomainExpansionFilter) ([]*models.DomainExpansion, int, error)
 	FindByID(int64) (*models.DomainExpansion, error)
 	Delete(int64) error
 }
@@ -94,24 +94,41 @@ func (r *sqlDomainExpansionRepository) Update(id int64, req *models.UpdateDomain
 	return err
 }
 
-func (r *sqlDomainExpansionRepository) FindAll(f *models.DomainExpansionFilter) ([]*models.DomainExpansion, error) {
+func (r *sqlDomainExpansionRepository) FindAll(f *models.DomainExpansionFilter) ([]*models.DomainExpansion, int, error) {
 	r.RLock()
 	defer r.RUnlock()
+
+	var args []any
+	var where []string
+
+	if f.Name != "" {
+		where = append(where, ` WHERE name LIKE ? ESCAPE '\'`)
+		args = append(args, "%"+escapeLike(f.Name)+"%")
+	}
+
+	whereSQL := ""
+	if len(where) > 0 {
+		whereSQL += " WHERE " + strings.Join(where, " AND ")
+	}
+
+	var total int
+	if err := r.db.QueryRow("SELECT COUNT(*) FROM domain_expansion"+whereSQL, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("domainexpansion_reponsitory.FindAll: %w", err)
+	}
+
+	if total == 0 {
+		return []*models.DomainExpansion{}, 0, nil
+	}
 
 	query := `
 		SELECT id, character_id, name, description
 		FROM domain_expansion
-	`
-
-	var args []any
-	if f.Name != "" {
-		query += ` WHERE name LIKE ? ESCAPE '\'`
-		args = append(args, "%"+escapeLike(f.Name)+"%")
-	}
+	` + whereSQL + `ORDER BY id LIMIT ? OFFSET ?`
+	args = append(args, f.Limit, f.Offset())
 
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("domainexpansion_repository.FindAll: %w", err)
+		return nil, 0, fmt.Errorf("domainexpansion_repository.FindAll: %w", err)
 	}
 	defer rows.Close()
 
@@ -124,16 +141,16 @@ func (r *sqlDomainExpansionRepository) FindAll(f *models.DomainExpansionFilter) 
 			&d.Name,
 			&d.Description,
 		); err != nil {
-			return nil, fmt.Errorf("domainexpansion_repository.FindAll: %w", err)
+			return nil, 0, fmt.Errorf("domainexpansion_repository.FindAll: %w", err)
 		}
 		domains = append(domains, &d)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("domainexpansion_repository.FindAll: %w", err)
+		return nil, 0, fmt.Errorf("domainexpansion_repository.FindAll: %w", err)
 	}
 
-	return domains, nil
+	return domains, 0, nil
 }
 
 func (r *sqlDomainExpansionRepository) FindByID(id int64) (*models.DomainExpansion, error) {
