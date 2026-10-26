@@ -8,9 +8,10 @@ import (
 
 // Config holds all application configuration, loaded from env variables.
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	JWT      JWTConfig
+	Server    ServerConfig
+	Database  DatabaseConfig
+	JWT       JWTConfig
+	RateLimit RateLimitConfig
 }
 
 type ServerConfig struct {
@@ -26,6 +27,14 @@ type DatabaseConfig struct {
 type JWTConfig struct {
 	Secret      string
 	ExpireHours int
+}
+
+type RateLimitConfig struct {
+	RPS         float64
+	Burst       int
+	AuthPerMin  float64
+	AuthBurst   int
+	TrustHeader string
 }
 
 // Load reads environment variables and returns a populated Config struct.
@@ -60,6 +69,11 @@ func Load() (*Config, error) {
 		port = "8989"
 	}
 
+	rps := envFloat("RATE_LIMIT_RPS", 10)
+	burst := int(envFloat("RATE_LIMIT_BURST", 20))
+	authPerMin := envFloat("AUTH_RATE_LIMIT_PER_MIN", 5)
+	authBurst := int(envFloat("AUTH_RATE_LIMIT_BURST", 5))
+
 	return &Config{
 		Server: ServerConfig{
 			Port:            port,
@@ -68,5 +82,21 @@ func Load() (*Config, error) {
 		},
 		Database: DatabaseConfig{DSN: dbDSN},
 		JWT:      JWTConfig{Secret: secret, ExpireHours: jwtExpire},
+		RateLimit: RateLimitConfig{
+			RPS:         rps,
+			Burst:       burst,
+			AuthPerMin:  authPerMin,
+			AuthBurst:   authBurst,
+			TrustHeader: os.Getenv("TRUSTED_PROXY_HEADER"),
+		},
 	}, nil
+}
+
+// envFloat reads a positive number from the environment, or returns default.
+func envFloat(key string, def float64) float64 {
+	v, err := strconv.ParseFloat(os.Getenv(key), 64)
+	if err != nil || v <= 0 {
+		return def
+	}
+	return v
 }

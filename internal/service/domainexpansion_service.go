@@ -71,12 +71,7 @@ func (s *domainExpansionService) Update(id int64, req *models.UpdateDomainExpans
 }
 
 func (s *domainExpansionService) FindAll(f *models.DomainExpansionFilter) ([]*models.DomainExpansion, error) {
-	domainsExpansion, err := s.repo.FindAll(f)
-	if err != nil {
-		return nil, err
-	}
-
-	return domainsExpansion, nil
+	return s.repo.FindAll(f)
 }
 
 func (s *domainExpansionService) FindByID(id int64) (*models.DomainExpansion, error) {

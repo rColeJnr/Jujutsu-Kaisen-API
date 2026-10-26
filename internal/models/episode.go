@@ -32,4 +32,5 @@ type UpdateEpisodeRequest struct {
 type EpisodeFilter struct {
 	Season int
 	Title  string
+	Pagination
 }

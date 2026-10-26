@@ -68,12 +68,7 @@ func (s *ctechniqueService) Update(id int64, req *models.UpdateCursedTechniqueRe
 }
 
 func (s *ctechniqueService) FindAll(f *models.CursedTechniqueFilter) ([]*models.CursedTechnique, error) {
-	cTechniques, err := s.repo.FindAll(f)
-	if err != nil {
-		return nil, err
-	}
-
-	return cTechniques, nil
+	return s.repo.FindAll(f)
 }
 
 func (s *ctechniqueService) FindByID(id int64) (*models.CursedTechnique, error) {

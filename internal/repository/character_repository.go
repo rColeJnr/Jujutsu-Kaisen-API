@@ -13,7 +13,7 @@ import (
 type CharacterRepository interface {
 	Insert(*models.CreateCharacterRequest) (int64, error)
 	Update(int64, *models.UpdateCharacterRequest) error
-	FindAll(*models.CharacterFilter) ([]*models.Character, error)
+	FindAll(*models.CharacterFilter) ([]*models.Character, int, error)
 	FindByID(int64) (*models.Character, error)
 	Delete(int64) error
 }
@@ -170,19 +170,9 @@ func (r *sqlCharacterRepository) Update(id int64, req *models.UpdateCharacterReq
 	return err
 }
 
-func (r *sqlCharacterRepository) FindAll(f *models.CharacterFilter) ([]*models.Character, error) {
+func (r *sqlCharacterRepository) FindAll(f *models.CharacterFilter) ([]*models.Character, int, error) {
 	r.RLock()
 	defer r.RUnlock()
-
-	query := `
-		SELECT c.id, c.name, c.description, c.image, c.species, c.status, c.birthday, 
-			c.age, c.gender, c.height, c.weight, c.hair_color, c.eye_color, c.grade, c.clan, c.first_appearance_ep,
-			d.id, d.name, d.description,
-			e.title
-		FROM character c
-		LEFT JOIN domain_expansion d ON c.id = d.character_id
-		LEFT JOIN episode e ON c.first_appearance_ep = e.id
-	`
 
 	var (
 		where []string
@@ -210,13 +200,34 @@ func (r *sqlCharacterRepository) FindAll(f *models.CharacterFilter) ([]*models.C
 		args = append(args, f.Gender)
 	}
 
+	whereSQL := ""
 	if len(where) > 0 {
-		query += " WHERE " + strings.Join(where, " AND ")
+		whereSQL += " WHERE " + strings.Join(where, " AND ")
 	}
+
+	var total int
+	if err := r.db.QueryRow("SELECT COUNT(*) FROM character c"+whereSQL, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("character_repo.FindAll: %w", err)
+	}
+
+	if total == 0 {
+		return []*models.Character{}, 0, nil
+	}
+
+	query := `
+		SELECT c.id, c.name, c.description, c.image, c.species, c.status, c.birthday, 
+			c.age, c.gender, c.height, c.weight, c.hair_color, c.eye_color, c.grade, c.clan, c.first_appearance_ep,
+			d.id, d.name, d.description,
+			e.title
+		FROM character c
+		LEFT JOIN domain_expansion d ON c.id = d.character_id
+		LEFT JOIN episode e ON c.first_appearance_ep = e.id
+	` + whereSQL + `ORDER BY c.id LIMIT ? OFFSET ?`
+	args = append(args, f.Limit, f.Offset())
 
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("character_repo.FindAll: %w", err)
+		return nil, 0, fmt.Errorf("character_repo.FindAll: %w", err)
 	}
 	defer rows.Close()
 
@@ -250,7 +261,7 @@ func (r *sqlCharacterRepository) FindAll(f *models.CharacterFilter) ([]*models.C
 			&dDescription,
 			&e,
 		); err != nil {
-			return nil, fmt.Errorf("character_repo.FindAll: %w", err)
+			return nil, 0, fmt.Errorf("character_repo.FindAll: %w", err)
 		}
 		if e.Valid {
 			c.FirstAppearance = &models.FirstAppearance{EpisodeID: ep, EpisodeTitle: e.String}
@@ -271,18 +282,18 @@ func (r *sqlCharacterRepository) FindAll(f *models.CharacterFilter) ([]*models.C
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("character_repo.FindAll: %w", err)
+		return nil, 0, fmt.Errorf("character_repo.FindAll: %w", err)
 	}
 
 	if len(characters) == 0 {
-		return characters, nil
+		return characters, 0, nil
 	}
 
 	// Query Cursed Techniques
 	for _, char := range characters {
 		ctRows, err := r.db.Query("SELECT id, character_id, name, description, type FROM cursed_technique WHERE character_id = ?", char.ID)
 		if err != nil && err != sql.ErrNoRows {
-			return nil, fmt.Errorf("character_repo.FindAll: %w", err)
+			return nil, 0, fmt.Errorf("character_repo.FindAll: %w", err)
 		}
 
 		ctErr := func() error {
@@ -299,11 +310,11 @@ func (r *sqlCharacterRepository) FindAll(f *models.CharacterFilter) ([]*models.C
 		}()
 
 		if ctErr != nil {
-			return nil, fmt.Errorf("character_repo.FindAll: %w", ctErr)
+			return nil, 0, fmt.Errorf("character_repo.FindAll: %w", ctErr)
 		}
 	}
 
-	return characters, nil
+	return characters, total, nil
 }
 
 func (r *sqlCharacterRepository) FindByID(id int64) (*models.Character, error) {

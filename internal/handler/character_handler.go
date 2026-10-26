@@ -89,22 +89,29 @@ func (h *characterHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *characterHandler) FindAll(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
-	filters := &models.CharacterFilter{
-		Name:    strings.TrimSpace(query.Get("name")),
-		Status:  strings.TrimSpace(query.Get("status")),
-		Species: strings.TrimSpace(query.Get("species")),
-		Grade:   strings.TrimSpace(query.Get("grade")),
-		Gender:  strings.TrimSpace(query.Get("gender")),
+	page, err := parsePagination(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
 	}
 
-	c, err := h.svc.FindAll(filters)
+	query := r.URL.Query()
+	filters := &models.CharacterFilter{
+		Name:       strings.TrimSpace(query.Get("name")),
+		Status:     strings.TrimSpace(query.Get("status")),
+		Species:    strings.TrimSpace(query.Get("species")),
+		Grade:      strings.TrimSpace(query.Get("grade")),
+		Gender:     strings.TrimSpace(query.Get("gender")),
+		Pagination: page,
+	}
+
+	c, total, err := h.svc.FindAll(filters)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	if err = writeJson(w, http.StatusOK, c); err != nil {
+	if err = writeJson(w, http.StatusOK, models.NewPaginated(c, page, total)); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}

@@ -9,9 +9,11 @@ import (
 	"github.com/rcolejnr/jjk-api/internal/config"
 	"github.com/rcolejnr/jjk-api/internal/jwt"
 	lg "github.com/rcolejnr/jjk-api/internal/logger"
+	"github.com/rcolejnr/jjk-api/internal/middleware"
 	"github.com/rcolejnr/jjk-api/internal/repository"
 	"github.com/rcolejnr/jjk-api/internal/service"
 	"github.com/rs/cors"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -80,6 +82,9 @@ const (
 func Mux(db *sql.DB, logger *slog.Logger, cfg *config.Config) http.Handler {
 	jwtManager := jwt.NewManager(cfg.JWT.Secret, cfg.JWT.ExpireHours)
 
+	apiLimiter := middleware.NewRateLimiter(rate.Limit(cfg.RateLimit.RPS), cfg.RateLimit.Burst, cfg.RateLimit.TrustHeader)
+	authLimiter := middleware.NewRateLimiter(rate.Limit(cfg.RateLimit.AuthPerMin/60), cfg.RateLimit.AuthBurst, cfg.RateLimit.TrustHeader)
+
 	aRepo := repository.NewAuthRepository(db)
 	cRepo := repository.NewCharacterRepository(db)
 	ctRepo := repository.NewCursedTechniqueRepository(db)
@@ -104,9 +109,9 @@ func Mux(db *sql.DB, logger *slog.Logger, cfg *config.Config) http.Handler {
 	mux := http.NewServeMux()
 
 	// <-- Auth -->
-	mux.HandleFunc(http.MethodPost+" "+"/api/auth/register", aHandler.Register)
-	mux.HandleFunc(http.MethodPost+" "+"/api/auth/login", aHandler.Login)
-	mux.HandleFunc(http.MethodPatch+" "+"/api/auth/update", jwtManager.Middleware(aHandler.Update))
+	mux.HandleFunc(http.MethodPost+" "+"/api/auth/register", authLimiter.Middleware(aHandler.Register))
+	mux.HandleFunc(http.MethodPost+" "+"/api/auth/login", authLimiter.Middleware(aHandler.Login))
+	mux.HandleFunc(http.MethodPatch+" "+"/api/auth/update", authLimiter.Middleware(jwtManager.Middleware(aHandler.Update)))
 
 	// <-- Character -->
 	mux.HandleFunc(http.MethodGet+" "+CharacterRoute, cHandler.FindAll)
@@ -140,7 +145,7 @@ func Mux(db *sql.DB, logger *slog.Logger, cfg *config.Config) http.Handler {
 	mux.HandleFunc(http.MethodPost+" "+TerminologyRoute, jwtManager.Middleware(tHandler.Insert))
 	mux.HandleFunc(http.MethodPatch+" "+TerminologyByID, jwtManager.Middleware(tHandler.Update))
 
-	l := lg.Logger(logger)(mux)
+	l := apiLimiter.Middleware(middleware.RequestID(lg.Logger(logger)(mux)))
 
 	corsMiddleware := cors.New(cors.Options{
 		AllowedOrigins: []string{fmt.Sprintf("http://localhost:%s", cfg.Server.Port)},
@@ -154,7 +159,9 @@ func Mux(db *sql.DB, logger *slog.Logger, cfg *config.Config) http.Handler {
 		AllowedHeaders: []string{
 			"Content-Type",
 			"Authorization",
+			middleware.HeaderRequestID,
 		},
+		ExposedHeaders:   []string{middleware.HeaderRequestID, "Retry-After"},
 		AllowCredentials: true,
 		MaxAge:           300,
 	})

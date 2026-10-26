@@ -62,15 +62,8 @@ type UpdateCharacterRequest struct {
 	FirstAppearanceEp *int64   `json:"first_appearance_ep,omitempty"`
 }
 
-// CharacterPaginatedResponse wraps a list of characters with pagination metadata.
-type CharacterPaginatedResponse struct {
-	Data  []Character `json:"data"`
-	Count int         `json:"count"`
-	Page  int         `json:"page"`
-	Limit int         `json:"limit"`
-}
-
 // CharacterFilter defines the filters to http.MethodGet characters
 type CharacterFilter struct {
 	Name, Species, Status, Gender, Grade string
+	Pagination
 }
