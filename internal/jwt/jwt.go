@@ -21,6 +21,9 @@ type Manager struct {
 	ExpireHours int
 }
 
+// issuer identifies tokens created by this API.
+const issuer = "jjk-api"
+
 func NewManager(secret string, expireHours int) *Manager {
 	return &Manager{
 		SecretKey:   []byte(secret),
@@ -47,14 +50,23 @@ func (m *Manager) Generate(id int64, email string) (string, error) {
 }
 
 // Validate parses and validates a JWT string, returning the embedded claims.
+//
+// - only HS256 is accepted, so a token can't pick its own algorithm
+// (this also blocks alg=none attack)
+// - the issuer must match, so tokens from another service signed with the same secret aren't accepted
+// - exp must be not nil: a token that never expires is rejected
+// - iat must not be in the future
 func (m *Manager) Validate(tokenString string) (*models.Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &jwtCustomClaims{}, func(token *jwt.Token) (any, error) {
-		// IMPORTANT: Always verify the signing method to prevent algorithm substitution attacks
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("jwt: unexpected signing mehtod: %v", token.Header["alg"])
-		}
-		return m.SecretKey, nil
-	})
+	token, err := jwt.ParseWithClaims(
+		tokenString,
+		&jwtCustomClaims{},
+		func(token *jwt.Token) (any, error) { return m.SecretKey, nil },
+		jwt.WithValidMethods([]string{"HS256"}),
+		jwt.WithIssuer(issuer),
+		jwt.WithExpirationRequired(),
+		jwt.WithIssuedAt(),
+		jwt.WithLeeway(5*time.Second),
+	)
 
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
