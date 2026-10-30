@@ -42,11 +42,12 @@ func main() {
 	h := handler.Mux(db.DB, logger, cfg)
 
 	server := &http.Server{
-		Addr:         fmt.Sprintf(":%s", cfg.Server.Port),
-		Handler:      h,
-		ReadTimeout:  time.Duration(cfg.Server.ReadTimeoutSec) * time.Second,
-		WriteTimeout: time.Duration(cfg.Server.WriteTimeoutSec) * time.Second,
-		IdleTimeout:  120 * time.Second,
+		Addr:           fmt.Sprintf(":%s", cfg.Server.Port),
+		Handler:        h,
+		ReadTimeout:    time.Duration(cfg.Server.ReadTimeoutSec) * time.Second,
+		WriteTimeout:   time.Duration(cfg.Server.WriteTimeoutSec) * time.Second,
+		IdleTimeout:    120 * time.Second,
+		MaxHeaderBytes: 1 << 16, // 64 KiB
 	}
 
 	go func() {
