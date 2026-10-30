@@ -42,6 +42,14 @@ func (s *ctechniqueService) Insert(req *models.CreateCursedTechniqueRequest) (in
 		return 0, fmt.Errorf("validation: technique description can't be empty")
 	}
 
+	if err := validateTexts(
+		text("name", req.Name, maxNameLen),
+		text("description", req.Description, maxTextLen),
+		text("type", req.Type, maxShortLen),
+	); err != nil {
+		return 0, err
+	}
+
 	return s.repo.Insert(req)
 }
 
@@ -62,6 +70,14 @@ func (s *ctechniqueService) Update(id int64, req *models.UpdateCursedTechniqueRe
 
 	if req.Name == nil && req.Description == nil && req.Type == nil {
 		return fmt.Errorf("validation: all update fields can't be empty§")
+	}
+
+	if err := validateTexts(
+		text("name", str(req.Name), maxNameLen),
+		text("description", str(req.Description), maxTextLen),
+		text("type", str(req.Type), maxShortLen),
+	); err != nil {
+		return err
 	}
 
 	return s.repo.Update(id, req)

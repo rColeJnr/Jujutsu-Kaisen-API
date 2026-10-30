@@ -108,7 +108,14 @@ func reqValidation(req *models.CreateCharacterRequest) error {
 		return fmt.Errorf("validation: episode can't be less than 0, got: %d, %s.", req.FirstAppearanceEp, req.Name)
 	}
 
-	return nil
+	return validateTexts(
+		text("name", req.Name, maxNameLen),
+		text("description", req.Description, maxTextLen),
+		imageURL("images", req.Image),
+		text("birthday", req.Birthday, maxShortLen),
+		text("hair_color", req.HairColor, maxShortLen),
+		text("eye_color", req.EyeColor, maxShortLen),
+	)
 }
 
 func reqUpdateValidation(req *models.UpdateCharacterRequest) error {
@@ -183,7 +190,14 @@ func reqUpdateValidation(req *models.UpdateCharacterRequest) error {
 		return fmt.Errorf("validation: no fields provided for update")
 	}
 
-	return nil
+	return validateTexts(
+		text("name", str(req.Name), maxNameLen),
+		text("description", str(req.Description), maxTextLen),
+		imageURL("images", str(req.Image)),
+		text("birthday", str(req.Birthday), maxShortLen),
+		text("hair_color", str(req.HairColor), maxShortLen),
+		text("eye_color", str(req.EyeColor), maxShortLen),
+	)
 }
 
 func trimmAndLowerCase(s string) string {

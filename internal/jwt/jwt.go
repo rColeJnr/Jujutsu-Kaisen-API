@@ -24,6 +24,12 @@ type Manager struct {
 // issuer identifies tokens created by this API.
 const issuer = "jjk-api"
 
+// Sentinel errors, The HTTP layer only shows clients these generic messages.
+var (
+	ErrInvalidToken = errors.New("invalid token")
+	ErrExpiredToken = errors.New("token has expired")
+)
+
 func NewManager(secret string, expireHours int) *Manager {
 	return &Manager{
 		SecretKey:   []byte(secret),
@@ -70,14 +76,14 @@ func (m *Manager) Validate(tokenString string) (*models.Claims, error) {
 
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
-			return nil, fmt.Errorf("jwt: token has expired")
+			return nil, ErrExpiredToken
 		}
-		return nil, fmt.Errorf("jwt: invalid token: %w", err)
+		return nil, ErrInvalidToken
 	}
 
 	claims, ok := token.Claims.(*jwtCustomClaims)
 	if !ok || !token.Valid {
-		return nil, fmt.Errorf("jwt: token claims are invalid")
+		return nil, ErrInvalidToken
 	}
 
 	return &claims.Claims, nil

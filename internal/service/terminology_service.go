@@ -32,6 +32,13 @@ func (s *terminologyService) Insert(req *models.CreateTerminologyRequest) (int64
 		return 0, fmt.Errorf("validation: meaning can't be empty")
 	}
 
+	if err := validateTexts(
+		text("term", req.Term, maxNameLen),
+		text("meaning", req.Meaning, maxTextLen),
+	); err != nil {
+		return 0, err
+	}
+
 	return s.repo.Insert(req)
 }
 
@@ -52,6 +59,13 @@ func (s *terminologyService) Update(id int64, req *models.UpdateTerminologyReque
 
 	if req.Term == nil && req.Meaning == nil {
 		return fmt.Errorf("validation: all update fields can't be empty")
+	}
+
+	if err := validateTexts(
+		text("term", str(req.Term), maxNameLen),
+		text("meaning", str(req.Meaning), maxTextLen),
+	); err != nil {
+		return err
 	}
 
 	return s.repo.Update(id, req)

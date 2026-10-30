@@ -42,6 +42,13 @@ func (s *domainExpansionService) Insert(req *models.CreateDomainExpansionRequest
 		return 0, fmt.Errorf("validation: domain expansion description can't be empty")
 	}
 
+	if err := validateTexts(
+		text("name", req.Name, maxNameLen),
+		text("description", req.Description, maxTextLen),
+	); err != nil {
+		return 0, err
+	}
+
 	return s.repo.Insert(req)
 }
 
@@ -65,6 +72,13 @@ func (s *domainExpansionService) Update(id int64, req *models.UpdateDomainExpans
 
 	if req.Name == nil && req.Description == nil {
 		return fmt.Errorf("validation: all update fields can't be empty§")
+	}
+
+	if err := validateTexts(
+		text("name", str(req.Name), maxNameLen),
+		text("description", str(req.Description), maxTextLen),
+	); err != nil {
+		return err
 	}
 
 	return s.repo.Update(id, req)

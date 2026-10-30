@@ -42,6 +42,14 @@ func (s *episodeService) Insert(req *models.CreateEpisodeRequest) (int64, error)
 		return 0, fmt.Errorf("validation: characters can't be empty")
 	}
 
+	if err := validateTexts(
+		text("title", req.Title, maxNameLen),
+		imageURL("image", req.Image),
+		text("air_date", req.AirDate, maxShortLen),
+	); err != nil {
+		return 0, err
+	}
+
 	return s.repo.Insert(req)
 }
 
@@ -64,6 +72,14 @@ func (s *episodeService) Update(id int64, req *models.UpdateEpisodeRequest) erro
 
 	if req.Title == nil && req.Season == nil && req.AirDate == nil {
 		return fmt.Errorf("validation: no fields provided for update")
+	}
+
+	if err := validateTexts(
+		text("title", str(req.Title), maxNameLen),
+		imageURL("image", str(req.Image)),
+		text("air_date", str(req.AirDate), maxShortLen),
+	); err != nil {
+		return err
 	}
 
 	return s.repo.Update(id, req)
