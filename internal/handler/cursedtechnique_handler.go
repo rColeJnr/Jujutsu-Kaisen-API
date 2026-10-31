@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/rcolejnr/jjk-api/internal/models"
@@ -27,8 +26,7 @@ func NewCursedTechniqueHandler(svc service.CursedTechniqueService) CursedTechniq
 
 func (h *cursedTechniqueHandler) Insert(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateCursedTechniqueRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -43,6 +41,7 @@ func (h *cursedTechniqueHandler) Insert(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	err = json.NewEncoder(w).Encode(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -51,15 +50,14 @@ func (h *cursedTechniqueHandler) Insert(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *cursedTechniqueHandler) Update(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id, err := pathID(r)
 	if err != nil {
-		http.Error(w, "Invalid path value", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	var req models.UpdateCursedTechniqueRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -108,11 +106,12 @@ func (h *cursedTechniqueHandler) FindAll(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *cursedTechniqueHandler) FindByID(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id, err := pathID(r)
 	if err != nil {
-		http.Error(w, "Invalid path value", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	ct, err := h.svc.FindByID(id)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "not_found:") {

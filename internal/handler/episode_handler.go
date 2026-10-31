@@ -28,8 +28,7 @@ func NewEpisodeHandler(svc service.EpisodeService) EpisodeHandler {
 
 func (h *episodeHandler) Insert(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateEpisodeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -44,6 +43,7 @@ func (h *episodeHandler) Insert(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	err = json.NewEncoder(w).Encode(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -52,15 +52,14 @@ func (h *episodeHandler) Insert(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *episodeHandler) Update(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id, err := pathID(r)
 	if err != nil {
-		http.Error(w, "Invalid path value", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	var req models.UpdateEpisodeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -114,9 +113,9 @@ func (h *episodeHandler) FindAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *episodeHandler) FindByID(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id, err := pathID(r)
 	if err != nil {
-		http.Error(w, "Invalid path value", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	e, err := h.svc.FindByID(id)
@@ -135,9 +134,9 @@ func (h *episodeHandler) FindByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *episodeHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id, err := pathID(r)
 	if err != nil {
-		http.Error(w, "Invalid path value", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 

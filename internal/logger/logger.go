@@ -49,7 +49,16 @@ func Logger(logger *slog.Logger) func(http.Handler) http.Handler {
 			if r.Body != nil && !strings.HasPrefix(r.URL.Path, "/api/auth/") {
 				bodyBytes, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxBodyBytes))
 				if err != nil {
-					http.Error(wrapped, "request body too large", http.StatusRequestEntityTooLarge)
+					wrapped.Header().Set("Content-Type", "application/json")
+					wrapped.WriteHeader(http.StatusRequestEntityTooLarge)
+					_, _ = wrapped.Write([]byte(`{"code":413,"message":"request body too large"}` + "\n"))
+					logger.Info(http.StatusText(http.StatusRequestEntityTooLarge),
+						"X-Request-ID", middleware.FromContext(r.Context()),
+						"method", r.Method,
+						"path", r.URL.Path,
+						"status", http.StatusRequestEntityTooLarge,
+						"remote_address", r.RemoteAddr,
+					)
 					return
 				}
 				r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))

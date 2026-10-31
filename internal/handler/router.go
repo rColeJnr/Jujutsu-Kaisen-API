@@ -108,6 +108,10 @@ func Mux(db *sql.DB, logger *slog.Logger, cfg *config.Config) http.Handler {
 
 	mux := http.NewServeMux()
 
+	// <-- Health -->
+	// Public and cheap: used by uptime monitors and the hosting platform.
+	mux.HandleFunc(http.MethodGet+" "+"/api/health", Health(db))
+
 	// <-- Auth -->
 	mux.HandleFunc(http.MethodPost+" "+"/api/auth/register", authLimiter.Middleware(aHandler.Register))
 	mux.HandleFunc(http.MethodPost+" "+"/api/auth/login", authLimiter.Middleware(aHandler.Login))
@@ -145,9 +149,14 @@ func Mux(db *sql.DB, logger *slog.Logger, cfg *config.Config) http.Handler {
 	mux.HandleFunc(http.MethodPost+" "+TerminologyRoute, jwtManager.Middleware(tHandler.Insert))
 	mux.HandleFunc(http.MethodPatch+" "+TerminologyByID, jwtManager.Middleware(tHandler.Update))
 
-	l := apiLimiter.Middleware(middleware.RequestID(lg.Logger(logger)(mux)))
-
-	corsMiddleware := cors.New(cors.Options{
+	//	CORS -> request id -> logger -> recover -> rate limit -> cache -> routes
+	var h http.Handler = mux
+	h = middleware.Cache(cfg.Cache.MaxAge)(h)
+	h = apiLimiter.Middleware(h.ServeHTTP)
+	h = middleware.Recover(logger)(h)
+	h = lg.Logger(logger)(h)
+	h = middleware.RequestID(h)
+	h = cors.New(cors.Options{
 		AllowedOrigins: []string{fmt.Sprintf("http://localhost:%s", cfg.Server.Port)},
 		AllowedMethods: []string{
 			http.MethodGet,
@@ -159,12 +168,13 @@ func Mux(db *sql.DB, logger *slog.Logger, cfg *config.Config) http.Handler {
 		AllowedHeaders: []string{
 			"Content-Type",
 			"Authorization",
+			"If-None-Match",
 			middleware.HeaderRequestID,
 		},
-		ExposedHeaders:   []string{middleware.HeaderRequestID, "Retry-After"},
+		ExposedHeaders:   []string{middleware.HeaderRequestID, "Retry-After", "ETag"},
 		AllowCredentials: true,
 		MaxAge:           300,
-	})
+	}).Handler(h)
 
-	return corsMiddleware.Handler(l)
+	return h
 }

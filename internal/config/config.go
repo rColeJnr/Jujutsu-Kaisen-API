@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
+	"time"
 )
 
 // Config holds all application configuration, loaded from env variables.
@@ -12,6 +14,7 @@ type Config struct {
 	Database  DatabaseConfig
 	JWT       JWTConfig
 	RateLimit RateLimitConfig
+	Cache     CacheConfig
 }
 
 type ServerConfig struct {
@@ -35,6 +38,10 @@ type RateLimitConfig struct {
 	AuthPerMin  float64
 	AuthBurst   int
 	TrustHeader string
+}
+
+type CacheConfig struct {
+	MaxAge time.Duration
 }
 
 // Load reads environment variables and returns a populated Config struct.
@@ -69,6 +76,11 @@ func Load() (*Config, error) {
 		port = "8989"
 	}
 
+	cacheSec, err := intEnv("CACHE_MAX_AGE_SEC", 60, 0, 24*3600)
+	if err != nil {
+		return nil, err
+	}
+
 	rps := envFloat("RATE_LIMIT_RPS", 10)
 	burst := int(envFloat("RATE_LIMIT_BURST", 20))
 	authPerMin := envFloat("AUTH_RATE_LIMIT_PER_MIN", 5)
@@ -89,6 +101,7 @@ func Load() (*Config, error) {
 			AuthBurst:   authBurst,
 			TrustHeader: os.Getenv("TRUSTED_PROXY_HEADER"),
 		},
+		Cache: CacheConfig{MaxAge: time.Duration(cacheSec) * time.Second},
 	}, nil
 }
 
@@ -99,4 +112,18 @@ func envFloat(key string, def float64) float64 {
 		return def
 	}
 	return v
+}
+
+// intEnv reads an integer in [min, max]. An unset variable gives def; a set
+// but invalid one is an error (it used to silently fall back to the default).
+func intEnv(key string, def, min, max int) (int, error) {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return def, nil
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil || n < min || n > max {
+		return 0, fmt.Errorf("config: %s must be an integer between %d and %d, got %q", key, min, max, raw)
+	}
+	return n, nil
 }

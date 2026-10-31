@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/rcolejnr/jjk-api/internal/models"
@@ -27,8 +26,7 @@ func NewTerminologyHandler(svc service.TerminologyService) TerminologyHandler {
 
 func (h *terminologyHandler) Insert(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateTerminologyRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -43,6 +41,7 @@ func (h *terminologyHandler) Insert(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	err = json.NewEncoder(w).Encode(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -51,15 +50,14 @@ func (h *terminologyHandler) Insert(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *terminologyHandler) Update(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id, err := pathID(r)
 	if err != nil {
-		http.Error(w, "Invalid path value", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	var req models.UpdateTerminologyRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -108,9 +106,9 @@ func (h *terminologyHandler) FindAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *terminologyHandler) FindByID(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id, err := pathID(r)
 	if err != nil {
-		http.Error(w, "Invalid path value", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	t, err := h.svc.FindByID(id)

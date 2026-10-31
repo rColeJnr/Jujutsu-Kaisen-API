@@ -19,7 +19,7 @@ const maxBodyBytes = 1 << 20 // 1 MiB
 //   - nothing may follow the JSON value
 //
 // On failure it writes the error response itself and returns false,
-func decodeJSON(w htp.ResponseWriter, r *http.Request, dst any) bool {
+func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) bool {
 	mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil || mt != "application/json" {
 		writeError(w, http.StatusUnsupportedMediaType, fmt.Errorf("Content-Type must be application/json"))
